@@ -2,6 +2,15 @@ import re
 
 import yaml
 
+DELIMITERS = "|".join(
+    [
+        r"={3}\s",  # Content blocks
+        r"#{1,6}\s",  # Headers
+        r"[^\S\r\n]*(?:> ?)+ *\[![^\]]*\][\-\+]?",  # Callouts
+        r"`{3}",  # Code blocks
+    ]
+)
+
 
 def _prep_codefences(markdown: str) -> str:
     """We need to replace newlines in codefences with a placeholder to avoid splitting them into sections."""
@@ -30,9 +39,9 @@ def _get_sections(markdown: str) -> list[str]:
         markdown = "".join(markdown.split("---\n")[2:])
     markdown = _prep_codefences(markdown)
 
-    sections = re.split(r"\n(#{1,6})\s(?!\n#{1,6}\s)", markdown)
-    sections = [s.strip() for s in sections if s.strip()]
-    sections = [f"{sections[i]} {sections[i + 1]}" for i in range(0, len(sections), 2)]
+    sections = re.split(rf"\n({DELIMITERS})(?!\n[^\S\r\n]*{DELIMITERS})", markdown)
+    sections = [s.strip("\n") for s in sections if s.strip()]
+    sections = [f"{sections[i]}{sections[i + 1]}" for i in range(0, len(sections), 2)]
     return [_unprep_codefences(s) for s in sections]
 
 

@@ -38,6 +38,23 @@ Ved å bruke disse ordene ble det litt lettere å finne frem – selv om han for
 > [!TIP] **Lær noen grunnleggende fraser**
 > Det kan være nyttig å lære litt norsk før du besøker landet! Selv noen få ord kan gjøre en stor forskjell.
 
+=== "Eksempel på samtale"
+
+    ## En enkel samtale
+
+    **Turist:** Hei! Hvor er togstasjonen?  
+    **Lokal:** Den er der borte!  
+    **Turist:** Takk!  
+    **Lokal:** Ingen problem!
+
+=== "Kulturell innsikt"
+
+    ## Viktige kulturelle tips
+
+    - Nordmenn setter pris på høflighet.
+    - Et smil og et "takk" kan gjøre mye.
+    - Mange nordmenn forstår engelsk, men de vil sette pris på at du prøver norsk.
+
 ## 🚀 Historiens moral
 
 Selv når man **ikke forstår alt**, kan man alltid bruke *kroppsspråk* og et smil. 😊 Kommunikasjon handler ikke bare om
