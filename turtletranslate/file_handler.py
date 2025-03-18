@@ -36,14 +36,17 @@ def _get_sections(markdown: str) -> list[str]:
     return [_unprep_codefences(s) for s in sections]
 
 
-def parse(markdown: str) -> tuple[dict, list[str]]:
+def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
     """
     Parse a markdown string into frontmatter and sections.
     :param markdown: The markdown string.
+    :param prepend_md: Text to prepend at the beginning of the text, i.e. "> NOTE: This is a machine generated translation."
     :return: A tuple containing the frontmatter and sections.
     """
     frontmatter = _get_frontmatter(markdown)
     sections = _get_sections(markdown)
+    if prepend_md:
+        sections.insert(0, prepend_md.strip())
     return frontmatter, sections
 
 
@@ -55,5 +58,5 @@ def reconstruct(frontmatter: dict, sections: list[str]) -> str:
     :return: The reconstructed markdown string.
     """
     frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
-    sections_str = "\n".join(sections)
-    return f"---\n\n{frontmatter_str}---\n{sections_str}"
+    sections_str = "\n\n".join(sections)
+    return f"---\n{frontmatter_str}---\n\n{sections_str}"
