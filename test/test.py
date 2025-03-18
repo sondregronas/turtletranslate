@@ -8,3 +8,7 @@ print(frontmatter)
 for s in sections:
     print("#" * 10)
     print(s)
+
+# Output:
+output = file_handler.reconstruct(frontmatter, sections)
+# print(output)

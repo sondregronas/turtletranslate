@@ -45,3 +45,15 @@ def parse(markdown: str) -> tuple[dict, list[str]]:
     frontmatter = _get_frontmatter(markdown)
     sections = _get_sections(markdown)
     return frontmatter, sections
+
+
+def reconstruct(frontmatter: dict, sections: list[str]) -> str:
+    """
+    Reconstruct a markdown string from frontmatter and sections.
+    :param frontmatter: The frontmatter dictionary.
+    :param sections: The sections list.
+    :return: The reconstructed markdown string.
+    """
+    frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
+    sections_str = "\n".join(sections)
+    return f"---\n\n{frontmatter_str}---\n{sections_str}"
