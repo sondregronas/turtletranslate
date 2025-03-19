@@ -135,8 +135,10 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     try:
         data.translated_frontmatter = json.loads(_prompt(data, "frontmatter_worker").response)
         for key in data.translated_frontmatter:
-            if key not in data._original_frontmatter:
-                logger.error(f"Translated frontmatter key {key} not found in original frontmatter")
+            if key not in data.frontmatter:
+                logger.error(
+                    f"Translated frontmatter key {key} does not exist in original frontmatter (AI Hallucination)"
+                )
                 return translate_frontmatter(data, _attempts + 1)
     except json.JSONDecodeError:
         logger.error("Failed to decode JSON response")
