@@ -1,0 +1,12 @@
+from turtletranslate.models.summary import (
+    SUMMARIZER_WORKER_SYSTEM,
+    SUMMARIZER_CRITIC_SYSTEM,
+    SUMMARIZER_CRITIC_PROMPT,
+    SUMMARIZER_WORKER_PROMPT,
+)
+from turtletranslate.models.translation import (
+    TRANSLATION_CRITIC_SYSTEM,
+    TRANSLATION_CRITIC_PROMPT,
+    TRANSLATION_WORKER_SYSTEM,
+    TRANSLATION_WORKER_PROMPT,
+)

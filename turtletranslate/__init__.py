@@ -1,49 +1,51 @@
+from dataclasses import dataclass
+
+import ollama
+
+from turtletranslate import file_handler
+
+
+class TurtleTranslateException(BaseException): ...
+
+
 TRANSLATABLE_FRONTMATTER_KEYS = [
     "title",
     "description",
     "summary",
 ]
 
-# TODO: This is just a placeholder for now
-OPTIONS = {
-    "source_language": "en",
-    "target_language": "es",
-    "section": "<section>",
-}
 
-TRANSLATION_MODEL_FRONTMATTER = """\
-You are an advanced translator, specializing in translating markdown documents from {source_language} to {target_language}.
+@dataclass
+class TurtleTranslateData:
+    client: ollama.Client
+    document: str
+    model: str = "llama3.1"
+    source_language: str = "English"
+    target_language: str = "Spanish"
+    _max_attempts: int = 100
+    _sections: list[str] = None
+    _translated_sections: list[str] = None
+    _section: str = ""
+    _summary: str = ""
+    _frontmatter: dict = None
 
-You will translate the given values and translate them to {target_language} based on the context of the document you translated prior.
-"""
-TRANSLATION_MODEL_SECTION = """\
-You are an advanced translator, specializing in translating markdown documents from {source_language} to {target_language}.
+    def __post_init__(self):
+        self.frontmatter, self._sections = file_handler.parse(self.document)
 
-You will be given a single section to translate at a time, and you must only translate the content within the section.
-"""
+    def format(self) -> dict:
+        return {
+            "source_language": self.source_language,
+            "target_language": self.target_language,
+            "section": self._section,
+            "document": self.document,
+            "summary": self._summary,
+            "frontmatter": self.frontmatter,
+        }
 
-CRITIC_MODEL = """\
-You are a translation teacher, specializing in critiquing translations from {source_language} to {target_language}.
+    @property
+    def frontmatter(self) -> dict:
+        return self._frontmatter
 
-
-"""
-
-CRITIC_PROMPT = """\
-You must only reply with a "YES" or "NO <Explanation>" to the following questions:
-
-1. Is the translation accurate?
-2. Is the translation natural?
-3. Is the markdown syntax correct?
-4. Are special symbols preserved?
-5. Are the code blocks formatted correctly?
-6. Are the comments inside the code blocks translated?
-7. Is the code inside code blocks still in the original language?
-
-If you answer "NO" to any of the questions, you must provide an explanation for why you answered "NO".
-
-Here is the section you must critique, translated from {source_language} to {target_language}, which is only a small part of the entire document.
-
---- SECTION START ---
-{section}
---- SECTION END ---
-"""
+    @frontmatter.setter
+    def frontmatter(self, value: dict):
+        self._frontmatter = {k: v for k, v in value.items() if k in TRANSLATABLE_FRONTMATTER_KEYS}
