@@ -12,6 +12,7 @@ pip install git+https://github.com/sondregronas/turtletranslate@main
 
 ```python
 import ollama
+import os
 from turtletranslate import TurtleTranslator
 
 client = ollama.Client(os.getenv("OLLAMA_SERVER", "127.0.0.1"))
@@ -19,11 +20,11 @@ prepend_md = "> This text has been automatically translated from Norwegian to En
 with open("document.md", "r", encoding="utf-8") as f:
     md = f.read()
 
-data = TurtleTranslator(
+turtle = TurtleTranslator(
     client=client, document=md, source_language="Norwegian", target_language="English", prepend_md=prepend_md
 )
 
-translated_document = data.translate()
+translated_document = turtle.translate()
 
 print(translated_document)
 ```
