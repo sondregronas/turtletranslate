@@ -12,15 +12,29 @@ load_dotenv()
 client = ollama.Client(os.getenv("OLLAMA_SERVER", "127.0.0.1"))
 prepend_md = """> [!NOTE] Dette er en AI generert oversettelse som kan inneholde feil eller mangler.\n"""
 languages = ["English"]
+models = [
+    "deepseek-r1",
+    "phi4",
+    "llama3.2",
+    "llama3.1",
+    "mistral",
+    "gemma:7b",
+]
 logger.setLevel(DEBUG)
 
-for document in Path("docs").rglob("*.md"):
+
+def translate(model, document):
     logger.info(f"Translating {document}")
     with open(document, "r", encoding="utf-8") as f:
         md = f.read()
 
     data = TurtleTranslator(
-        client=client, document=md, source_language="Norwegian", target_language="English", prepend_md=prepend_md
+        client=client,
+        model=model,
+        document=md,
+        source_language="Norwegian",
+        target_language="English",
+        prepend_md=prepend_md,
     )
 
     os.makedirs(Path(__file__).parent / "translated", exist_ok=True)
@@ -28,8 +42,26 @@ for document in Path("docs").rglob("*.md"):
         data.target_language = language
         translated_document = data.translate()
         filename = document.stem
-        with open(Path(__file__).parent / "translated" / f"{filename}_{language}.md", "w", encoding="utf-8") as f:
+        with open(
+            Path(__file__).parent / "translated" / f"{filename}_{model.replace(':','-')}_{language}.md",
+            "w+",
+            encoding="utf-8",
+        ) as f:
             f.write(translated_document)
 
     logger.info("Translation complete!")
     logger.info(f"Summary generated: {data._summary}")
+
+
+DNF = []
+for model in models:
+    for document in Path(Path(__file__).parent / "docs").glob("*.md"):
+        try:
+            translate(model, document)
+        except Exception as e:
+            logger.error(f"{model} DID NOT FINISH ({document}): {e}")
+            DNF.append((model, document))
+            continue
+
+for model, document in DNF:
+    logger.info(f"Did not finish ({model}, {document})")
