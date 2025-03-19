@@ -1,5 +1,6 @@
 import logging
 import re
+from functools import lru_cache
 
 import yaml
 
@@ -91,6 +92,7 @@ def _get_sections(markdown: str) -> list[str]:
     return sections
 
 
+@lru_cache
 def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
     """
     Parse a markdown string into frontmatter and sections.
@@ -105,6 +107,7 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
     return frontmatter, sections
 
 
+@lru_cache
 def reconstruct(frontmatter: dict, sections: list[str]) -> str:
     """
     Reconstruct a markdown string from frontmatter and sections.
