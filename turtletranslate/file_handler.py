@@ -74,7 +74,7 @@ def _cleanup_sections(sections: list[str]) -> list[str]:
             sections.pop(i + 1)  # Remove the next section, as it is already captured in the callout
         else:
             merged_sections.append(section)
-    return [_unprep_codefences(s) for s in sections]
+    return [_unprep_codefences(s) for s in merged_sections]
 
 
 def _get_sections(markdown: str) -> list[str]:
