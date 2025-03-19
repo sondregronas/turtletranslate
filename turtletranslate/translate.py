@@ -32,9 +32,11 @@ SUMMARY_CACHE = dict()  # Cache for summaries, to avoid re-generating them
 
 @lru_cache
 def _download_model_if_not_exists(client: ollama.Client, model: str):
+    """Issues a pull command to the Ollama API if the model does not exist."""
     logger.info(f"Checking if model {model} exists")
     try:
         client.show(model)
+        logger.info(f"{model} exists! Proceeding")
     except ollama.ResponseError:
         logger.info(f"{model} did not exist, downloading")
         client.pull(model)
@@ -42,6 +44,7 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
 
 
 def _prompt(data, type: str) -> ollama.GenerateResponse:
+    """Prompt the Ollama API with the correct system and prompt for the given type (ENUM)."""
     system = TRANSLATE_TYPES[type][0].format(**data.format())
     prompt = TRANSLATE_TYPES[type][1].format(**data.format())
     _download_model_if_not_exists(data.client, data.model)
@@ -57,7 +60,8 @@ def _prompt(data, type: str) -> ollama.GenerateResponse:
     return response
 
 
-def approve_summary(data) -> bool:
+def _approve_summary(data) -> bool:
+    """Approve the summary, or retry if it does not meet the criteria."""
     logger.info("Reviewing summary")
     text = _prompt(data, "summary_critic").response
 
@@ -68,10 +72,12 @@ def approve_summary(data) -> bool:
 
 @lru_cache
 def hash_document(document: str, num_ctx: int) -> str:
+    """A simple hash function to hash the document and the number of context tokens, for caching purposes."""
     return hashlib.sha256(f"{document}-{num_ctx}".encode()).hexdigest()
 
 
 def _generate_summary(data, _attempts: int = 0) -> str:
+    """Internal function to generate a summary, with a maximum number of attempts."""
     if _attempts >= data._max_attempts:
         logger.error(f"Could not generate summary after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
@@ -79,13 +85,14 @@ def _generate_summary(data, _attempts: int = 0) -> str:
 
     data._summary = _prompt(data, "summary_worker").response
 
-    if not approve_summary(data):
+    if not _approve_summary(data):
         return _generate_summary(data, _attempts + 1)
     logger.info("Summary generated successfully!")
     return data._summary
 
 
 def generate_summary(data) -> str:
+    """Generate a summary of the document in order to give some context to the translator, then cache it."""
     if hash_document(data.document, data.num_ctx) in SUMMARY_CACHE:
         logger.debug("Using cached summary")
         return SUMMARY_CACHE[hash_document(data.document, data.num_ctx)]
@@ -94,7 +101,8 @@ def generate_summary(data) -> str:
     return summary
 
 
-def approve_translation(data) -> bool:
+def _approve_translation(data) -> bool:
+    """Approve the translation, or retry if it does not meet the criteria."""
     logger.info("Reviewing translation")
     text = _prompt(data, "translation_critic").response
 
@@ -103,7 +111,8 @@ def approve_translation(data) -> bool:
     logger.error(f"Translation did not meet the criteria. Reason: {text}")
 
 
-def translate_section(data, _attempts: int = 0) -> str:
+def _translate_section(data, _attempts: int = 0) -> str:
+    """Internal function to translate a section, with a maximum number of attempts."""
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
@@ -111,29 +120,32 @@ def translate_section(data, _attempts: int = 0) -> str:
 
     data._translated_section = _prompt(data, "translation_worker").response
 
-    if not approve_translation(data):
-        return translate_section(data, _attempts + 1)
+    if not _approve_translation(data):
+        return _translate_section(data, _attempts + 1)
 
     logger.info("Section translated successfully!")
     return data._translated_section
 
 
 def translate_sections(data) -> list[str]:
+    """Translate all sections in the document, one by one"""
     logger.info("Translating sections")
     data._translated_sections = []
     for section in data._sections:
         data._section = section
-        data._translated_sections.append(translate_section(data))
+        data._translated_sections.append(_translate_section(data))
 
     return data._translated_sections
 
 
 def extrapolate_json(text: str) -> dict:
+    """Extract the JSON from a string with some leniency."""
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
     return json.loads(text)
 
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
+    """Translate the relevant frontmatter keys (TRANSLATABLE_FRONTMATTER_KEYS) in the frontmatter."""
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
@@ -156,6 +168,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
 
 
 def translate(data) -> str:
+    """The only function you need to call to translate a document, with a TurtleTranslateData object as input."""
     logger.info(f"Translating document from {data.source_language} to {data.target_language}")
     time = timeit.default_timer()
     generate_summary(data)
