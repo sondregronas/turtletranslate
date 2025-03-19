@@ -89,7 +89,7 @@ def _generate_summary(data, _attempts: int = 0) -> str:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not generate summary after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
-    logger.info(f"Generating summary, attempt {_attempts + 1}")
+    logger.info(f"Generating summary. Attempt {_attempts + 1}/{data._max_attempts}")
 
     data._summary = _prompt(data, "summary_worker").response
 
@@ -124,7 +124,7 @@ def _translate_section(data, _attempts: int = 0) -> str:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
-    logger.info(f"Translating section, attempt {_attempts + 1}")
+    logger.info(f"Translating section ({len(data._sections)} left). Attempt {_attempts + 1}/{data._max_attempts}")
 
     data._translated_section = _prompt(data, "translation_worker").response
 
@@ -157,7 +157,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
-    logger.info("Translating frontmatter")
+    logger.info("Translating frontmatter. Attempt {_attempts + 1}/{data._max_attempts}")
     try:
         new_fm = extrapolate_json(_prompt(data, "frontmatter_worker").response)
         data.translated_frontmatter = new_fm
