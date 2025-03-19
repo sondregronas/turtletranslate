@@ -17,6 +17,7 @@ prepend_md = """> [!NOTE] Dette er en AI generert oversettelse som kan inneholde
 
 languages = [
     "English",
+    "Spanish",
 ]
 models = [
     "llama3.1",
@@ -55,7 +56,10 @@ def translate(model, file, context_size):
     os.makedirs(Path(__file__).parent / "translated", exist_ok=True)
     for language in languages:
         data.target_language = language
+        start = timeit.default_timer()
         translated_document = data.translate()
+        end = timeit.default_timer()
+        translated_document = translated_document.replace("---", f"---\ntime_to_translate: {end - start:.2f}s", 1)
         filename = file.stem
         with open(
             Path(__file__).parent / "translated" / f"{filename}_{model.replace(':','-')}_{language}_{context_size}.md",
