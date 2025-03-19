@@ -40,12 +40,12 @@ SUMMARY_CACHE = dict()  # Cache for summaries, to avoid re-generating them
 @lru_cache
 def _download_model_if_not_exists(client: ollama.Client, model: str):
     """Issues a pull command to the Ollama API if the model does not exist."""
-    logger.info(f"Checking if model {model} exists")
+    logger.info(f"Checking if model {model} is installed")
     try:
         client.show(model)
-        logger.info(f"{model} exists! Proceeding")
+        logger.info(f"{model} is installed! Proceeding")
     except ollama.ResponseError:
-        logger.info(f"{model} did not exist, downloading")
+        logger.info(f"{model} was not installed. Downloading...")
         client.pull(model)
         logger.info(f"Downloaded {model}")
 
@@ -111,7 +111,7 @@ def generate_summary(data) -> str:
 
 def _approve_translation(data) -> bool:
     """Approve the translation, or retry if it does not meet the criteria."""
-    logger.info("Reviewing translation")
+    logger.debug("Reviewing translation")
     text = _prompt(data, "translation_critic").response
 
     if text.lower().strip() == "yes" or "no" not in text.lower().split():
@@ -119,12 +119,14 @@ def _approve_translation(data) -> bool:
     logger.error(f"Translation did not meet the criteria. Reason: {text}")
 
 
-def _translate_section(data, _attempts: int = 0) -> str:
+def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> str:
     """Internal function to translate a section, with a maximum number of attempts."""
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
-    logger.info(f"Translating section ({len(data._sections)} left). Attempt {_attempts + 1}/{data._max_attempts}")
+    logger.info(
+        f"Translating section ({_current_section}/{len(data._sections)}). Attempt {_attempts + 1}/{data._max_attempts}"
+    )
 
     data._translated_section = _prompt(data, "translation_worker").response
 
@@ -137,11 +139,10 @@ def _translate_section(data, _attempts: int = 0) -> str:
 
 def translate_sections(data) -> list[str]:
     """Translate all sections in the document, one by one"""
-    logger.info("Translating sections")
     data._translated_sections = []
-    for section in data._sections:
+    for i, section in enumerate(data._sections):
         data._section = section
-        data._translated_sections.append(_translate_section(data))
+        data._translated_sections.append(_translate_section(data, _current_section=i + 1))
 
     return data._translated_sections
 
@@ -157,7 +158,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
-    logger.info("Translating frontmatter. Attempt {_attempts + 1}/{data._max_attempts}")
+    logger.info(f"Translating frontmatter. Attempt {_attempts + 1}/{data._max_attempts}")
     try:
         new_fm = extrapolate_json(_prompt(data, "frontmatter_worker").response)
         data.translated_frontmatter = new_fm
@@ -178,6 +179,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
 def translate(data) -> str:
     """The only function you need to call to translate a document, with a TurtleTranslateData object as input."""
     logger.info(f"Translating document from {data.source_language} to {data.target_language}")
+    _download_model_if_not_exists(data.client, data.model)
     time = timeit.default_timer()
     generate_summary(data)
     translate_frontmatter(data)
