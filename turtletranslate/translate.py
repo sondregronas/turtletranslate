@@ -27,6 +27,13 @@ TRANSLATE_TYPES = {
     "frontmatter_worker": (TRANSLATION_WORKER_SYSTEM, FRONTMATTER_TRANSLATION_WORKER_PROMPT),
 }
 
+DEFAULT_OPTIONS = {
+    "temperature": 0.2,  # Lower temperature for more deterministic results, default 0.8
+    "top_k": 10,  # Lower = conservative sampling, default 40
+    "top_p": 0.3,  # Lower = conservative sampling, default 0.9
+    "repeat_last_n": -1,  # -1 = uses context size, 0 = disabled, default 64
+}
+
 SUMMARY_CACHE = dict()  # Cache for summaries, to avoid re-generating them
 
 
@@ -53,6 +60,7 @@ def _prompt(data, type: str) -> ollama.GenerateResponse:
     time = timeit.default_timer()
     options = {
         "num_ctx": data.num_ctx,
+        **DEFAULT_OPTIONS,
     }
     response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options)
     logger.debug(f"Responded in {timeit.default_timer() - time:.2f}s")
