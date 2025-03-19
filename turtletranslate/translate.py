@@ -73,3 +73,37 @@ def generate_summary(data: TurtleTranslateData, _attempts: int = 0) -> str:
 
     logger.info("Summary generated successfully!")
     return data._summary
+
+
+def approve_translation(data: TurtleTranslateData) -> bool:
+    logger.info("Reviewing translation")
+    text = _prompt(data, "translation_critic").response
+
+    if text.lower().strip() == "yes" or not "no" in text.lower().split():
+        return True
+    logger.error(f"Translation did not meet the criteria. Reason: {text}")
+
+
+def translate_section(data: TurtleTranslateData, _attempts: int = 0) -> str:
+    if _attempts >= data._max_attempts:
+        logger.error(f"Could not translate section after {_attempts} attempts.")
+        raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
+    logger.info(f"Translating section, attempt {_attempts + 1}")
+
+    data._section = _prompt(data, "translation_worker").response
+
+    if not approve_translation(data):
+        return translate_section(data, _attempts + 1)
+
+    logger.info("Section translated successfully!")
+    return data._section
+
+
+def translate_sections(data: TurtleTranslateData) -> list[str]:
+    logger.info("Translating sections")
+    data._translated_sections = []
+    for section in data._sections:
+        data._section = section
+        data._translated_sections.append(translate_section(data))
+
+    return data._translated_sections

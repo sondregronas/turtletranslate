@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from turtletranslate import file_handler, TurtleTranslateData
 from turtletranslate.logger import logger
-from turtletranslate.translate import generate_summary
+from turtletranslate.translate import generate_summary, translate_sections
 
 load_dotenv()
 
@@ -25,6 +25,10 @@ client = ollama.Client(os.getenv("OLLAMA_HOST", "127.0.0.1"))
 data = TurtleTranslateData(client=client, document=md, source_language="Norwegian", target_language="English")
 summary = generate_summary(data)
 print(summary)
+
+translated_sections = translate_sections(data)
+for section in translated_sections:
+    print(section)
 
 # print(frontmatter)
 # for s in sections:

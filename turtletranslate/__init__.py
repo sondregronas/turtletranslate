@@ -29,9 +29,13 @@ class TurtleTranslateData:
     _section: str = ""
     _summary: str = ""
     _frontmatter: dict = None
+    __translated_frontmatter: dict = None
 
     def __post_init__(self):
         self.frontmatter, self._sections = file_handler.parse(self.document)
+
+    def reconstruct_translated_document(self) -> str:
+        return file_handler.reconstruct(self._translated_frontmatter, self._translated_sections)
 
     def format(self) -> dict:
         return {
@@ -50,3 +54,11 @@ class TurtleTranslateData:
     @frontmatter.setter
     def frontmatter(self, value: dict):
         self._frontmatter = {k: v for k, v in value.items() if k in TRANSLATABLE_FRONTMATTER_KEYS}
+
+    @property
+    def _translated_frontmatter(self) -> dict:
+        return {k: self.__translated_frontmatter.get(k, v) for k, v in self.frontmatter.items()}
+
+    @_translated_frontmatter.setter
+    def _translated_frontmatter(self, value: dict):
+        self.__translated_frontmatter = value
