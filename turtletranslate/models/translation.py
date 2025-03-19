@@ -58,7 +58,7 @@ Instructions:
 12. Translate only the comments within code blocks.
 13. Do NOT translate anything inside > [!...], or similar markdown structures. They need to remain in the original language. (after the > [ and before the ])
 
-Respond only with the translated text, without any additional information. Remember to keep extra symbols at the end, such as spaces, line breaks, and indentation.
+Respond only with the translated text, without any additional information, do not include opinions about your own translation. Remember to keep extra symbols at the end, such as spaces, line breaks, and indentation.
 
 Here is the section you need to translate:
 {section}"""

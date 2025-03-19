@@ -1,24 +1,27 @@
+import logging
 import re
 
 import yaml
 
 from turtletranslate.logger import logger
 
-# The last part ([^\n]*(?:\n[ \t>][^\n]*)*) captures the callout content until a line doesn't start with a space or >
-CALLOUT_SYNTAX = r"[^\S\r\n]*(?:> ?)+ *\[![^\]]*\][\-\+]?([^\n]*(?:\n[ \t>][^\n]*)*)"
-
+# The blockquote syntax captures content until there is a newline that is not followed by a blockquote symbol
+# Captures both callouts and blockquotes
+BLOCKQUOTE_SYNTAX = r"[^\S\r\n]*(?:> ?)([^\n]*(?:\n[ \t>][^\n]*)*)"
 DELIMITERS = "|".join(
     [
         r"#{1,6}\s",  # Headers
         r"`{3}(?:\n|.)+`{3}",  # Code fences
-        CALLOUT_SYNTAX,  # Callouts (NOTE: this one seems to be extra problematic in nested blocks)
+        BLOCKQUOTE_SYNTAX,  # Callouts and blockquotes
         # These are commented out because they can cause extra hallucinations in the translation, omitting them for now
         # r"={3}\s",  # Content blocks  # Not a problem so far, but might give inconsistent spacing
     ]
 )
 
-callout_regex = re.compile(CALLOUT_SYNTAX)
-delimiter_regex = re.compile(rf"({DELIMITERS})\n*", re.MULTILINE)
+# TODO: Adding sections to a dictionary with the section type as the key, and the section as the value, would
+#       allow for separate translation handling for different section types, i.e. admonitions, code blocks, etc.
+callout_regex = re.compile(BLOCKQUOTE_SYNTAX)
+delimiter_regex = re.compile(rf"(?:\n|^)({DELIMITERS})\n*", re.MULTILINE)
 
 
 def _prep_codefences(markdown: str) -> str:
@@ -45,6 +48,8 @@ def _get_frontmatter(markdown: str) -> dict:
 def _cleanup_sections(sections: list[str]) -> list[str]:
     """Merge sections that should be merged, i.e. headers with the following section, and remove duplicate selections."""
 
+    sections = [s.strip("\n") for s in sections if s and s.strip()]
+
     def should_merge(section: str) -> bool:
         mergable_symbols = ["#"]
         s = section.strip()
@@ -68,7 +73,7 @@ def _cleanup_sections(sections: list[str]) -> list[str]:
             sections.pop(i + 1)  # Remove the next section, as it is already captured in the callout
         else:
             merged_sections.append(section)
-    return merged_sections
+    return [_unprep_codefences(s) for s in sections]
 
 
 def _get_sections(markdown: str) -> list[str]:
@@ -77,9 +82,13 @@ def _get_sections(markdown: str) -> list[str]:
         markdown = "".join(markdown.split("---\n")[2:])
     markdown = _prep_codefences(markdown)
     sections = delimiter_regex.split(markdown)
-    sections = [s.strip("\n") for s in sections if s and s.strip()]
     sections = _cleanup_sections(sections)  # Merge headers with the following section
-    return [_unprep_codefences(s) for s in sections]
+
+    if logger.level == logging.DEBUG:
+        for i, x in enumerate(sections):
+            c = x.replace("\n", "\\n").replace("\t", "\\t")
+            logger.debug(f"Section {i}: {c}")
+    return sections
 
 
 def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
