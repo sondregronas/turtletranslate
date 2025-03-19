@@ -22,7 +22,6 @@ languages = [
 models = [
     "llama3.1",
     "llama3.2",
-    "llama3.3",
     "mistral",
     "gemma:7b",
     "phi4",
@@ -86,7 +85,7 @@ for model, file, context_size in itertools.product(
         start = timeit.default_timer()
         translate(model, file, context_size)
         TIME_TO_COMPLETE.append((model, file, timeit.default_timer() - start))
-    except (Exception, TurtleTranslateException) as e:
+    except TurtleTranslateException as e:
         logger.error(f"{model} DID NOT FINISH ({file}): {e}")
         DNF.append((model, file))
         continue

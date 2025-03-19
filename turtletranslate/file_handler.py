@@ -42,6 +42,10 @@ def _get_sections(markdown: str) -> list[str]:
 
     sections = re.split(rf"\n({DELIMITERS})(?!\n[^\S\r\n]*{DELIMITERS})", markdown)
     sections = [s.strip("\n") for s in sections if s.strip()]
+    # If the first section doesn't start with a delimiter, add a blank line to the beginning of the list
+    # this ensures we don't run into out of range issues when combining sections
+    if not sections[0].startswith("#"):
+        sections.insert(0, "")
     sections = [f"{sections[i]}{sections[i + 1]}" for i in range(0, len(sections), 2)]
     return [_unprep_codefences(s) for s in sections]
 
