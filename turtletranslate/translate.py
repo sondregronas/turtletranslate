@@ -66,6 +66,7 @@ def approve_summary(data) -> bool:
     logger.error(f"Summary did not meet the criteria. Reason: {text}")
 
 
+@lru_cache
 def hash_document(document: str) -> str:
     return hashlib.sha256(document.encode()).hexdigest()
 
