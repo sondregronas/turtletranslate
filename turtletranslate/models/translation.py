@@ -12,16 +12,17 @@ Review the markdown section translated from {source_language} to {target_languag
 Criteria:
 1. Is the translation semantically accurate?
 2. Does the translation read naturally and fluently in {target_language}?
-3. Is all markdown syntax preserved exactly as the original (headings, lists, tables, bold, italics, quotes)?
-4. Are special symbols (e.g., emojis, mathematical symbols, special characters) preserved exactly?
-5. Are all markdown links (anchor texts and URLs) unchanged and intact?
-6. Are image alt-texts accurately translated without changing the markdown syntax?
-7. Are numerical data, dates, measurements, and units preserved accurately?
-8. Are all code blocks formatted precisely as in the original (no alteration)?
-9. Are comments within code blocks accurately translated?
-10. Is all executable code within code blocks unchanged and in the original programming language?
-11. Is terminology consistently translated throughout the document?
-12. Is the translation culturally appropriate, avoiding unintended changes in meaning?
+3. Is all markdown syntax preserved exactly as in the original (headings, lists, tables, bold, italics, quotes)?
+4. Are special markdown structures (e.g., Obsidian callouts like '> [!note]', and tabbed content using '=== \"Tab Name\"') preserved exactly?
+5. Are special symbols (e.g., emojis, mathematical symbols, special characters) preserved exactly?
+6. Are all markdown links (anchor texts and URLs) unchanged and intact?
+7. Are image alt-texts accurately translated without changing markdown syntax?
+8. Are numerical data, dates, measurements, and units preserved accurately?
+9. Are all code blocks formatted precisely as in the original (no alteration)?
+10. Are comments within code blocks accurately translated?
+11. Is all executable code within code blocks unchanged and in the original programming language?
+12. Is terminology consistently translated throughout the document?
+13. Is the translation culturally appropriate, avoiding unintended changes in meaning?
 
 If you respond "NO" to any criterion, provide a brief explanation.
 
