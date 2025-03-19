@@ -13,7 +13,7 @@ TRANSLATABLE_FRONTMATTER_KEYS = [
 
 
 @dataclass
-class TurtleTranslateData:
+class TurtleTranslator:
     client: ollama.Client
     document: str
     model: str = "llama3.1"

@@ -40,7 +40,7 @@ def _get_sections(markdown: str) -> list[str]:
     markdown = _prep_codefences(markdown)
 
     sections = re.split(rf"\n({DELIMITERS})(?!\n[^\S\r\n]*{DELIMITERS})", markdown)
-    sections = [s.strip("\n") for s in sections if s.strip()]
+    sections = [s for s in sections if s.strip()]
     sections = [f"{sections[i]}{sections[i + 1]}" for i in range(0, len(sections), 2)]
     return [_unprep_codefences(s) for s in sections]
 
@@ -67,5 +67,7 @@ def reconstruct(frontmatter: dict, sections: list[str]) -> str:
     :return: The reconstructed markdown string.
     """
     frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
-    sections_str = "\n\n".join(sections)
+    # Add a newline to every section to avoid merging them, but not if they end with a > symbol
+    sections = [f"{s}\n" if not s.strip().endswith(">") else s for s in sections]
+    sections_str = "\n".join(sections)
     return f"---\n{frontmatter_str}---\n\n{sections_str}"

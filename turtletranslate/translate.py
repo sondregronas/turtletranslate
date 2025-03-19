@@ -1,3 +1,4 @@
+import hashlib
 import json
 import timeit
 from functools import lru_cache
@@ -26,6 +27,8 @@ TRANSLATE_TYPES = {
     "frontmatter_worker": (TRANSLATION_WORKER_SYSTEM, FRONTMATTER_TRANSLATION_WORKER_PROMPT),
 }
 
+SUMMARY_CACHE = dict()  # Cache for summaries, to avoid re-generating them
+
 
 @lru_cache
 def _download_model_if_not_exists(client: ollama.Client, model: str):
@@ -33,7 +36,7 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
     try:
         client.show(model)
     except ollama.ResponseError:
-        logger.info(f"Downloading {model}")
+        logger.info(f"{model} did not exist, downloading")
         client.pull(model)
         logger.info(f"Downloaded {model}")
 
@@ -63,30 +66,38 @@ def approve_summary(data) -> bool:
     logger.error(f"Summary did not meet the criteria. Reason: {text}")
 
 
-def generate_summary(data, _attempts: int = 0) -> str:
-    # We can reuse the cache if we call the function with the same data (i.e. translating to multiple languages)
-    @lru_cache
-    def _generate_summary(_):
-        if _attempts >= data._max_attempts:
-            logger.error(f"Could not generate summary after {_attempts} attempts.")
-            raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
-        logger.info(f"Generating summary, attempt {_attempts + 1}")
+def hash_document(document: str) -> str:
+    return hashlib.sha256(document.encode()).hexdigest()
 
-        data._summary = _prompt(data, "summary_worker").response
 
-        if not approve_summary(data):
-            return generate_summary(data, _attempts + 1)
-        logger.info("Summary generated successfully!")
-        return data._summary
+def _generate_summary(data, _attempts: int = 0) -> str:
+    if _attempts >= data._max_attempts:
+        logger.error(f"Could not generate summary after {_attempts} attempts.")
+        raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
+    logger.info(f"Generating summary, attempt {_attempts + 1}")
 
-    return _generate_summary(data.document)
+    data._summary = _prompt(data, "summary_worker").response
+
+    if not approve_summary(data):
+        return _generate_summary(data, _attempts + 1)
+    logger.info("Summary generated successfully!")
+    return data._summary
+
+
+def generate_summary(data) -> str:
+    if hash_document(data.document) in SUMMARY_CACHE:
+        logger.debug("Using cached summary")
+        return SUMMARY_CACHE[hash_document(data.document)]
+    summary = _generate_summary(data)
+    SUMMARY_CACHE[hash_document(data.document)] = summary
+    return summary
 
 
 def approve_translation(data) -> bool:
     logger.info("Reviewing translation")
     text = _prompt(data, "translation_critic").response
 
-    if text.lower().strip() == "yes" or not "no" in text.lower().split():
+    if text.lower().strip() == "yes" or "no" not in text.lower().split():
         return True
     logger.error(f"Translation did not meet the criteria. Reason: {text}")
 
@@ -135,8 +146,10 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
 
 def translate(data) -> str:
     logger.info(f"Translating document from {data.source_language} to {data.target_language}")
+    time = timeit.default_timer()
     generate_summary(data)
     translate_frontmatter(data)
     translate_sections(data)
     logger.info("Successfully translated document!")
+    logger.debug(f"Translation took {timeit.default_timer() - time:.2f}s")
     return data.reconstruct_translated_document()

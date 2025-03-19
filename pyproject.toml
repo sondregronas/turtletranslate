@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turtletranslate"
+version = "0.1.0"
+keywords = ["markdown", "mkdocs", "html", "converter", "ollama"]
+description = "A slow and inefficient markdown translator using ollama"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Sondre Grønås" }]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Documentation",
+]
+
+dependencies = [
+    "pyyaml~=6.0.2",
+    "ollama~=0.4.7",
+    "python-dotenv~=1.0.1"
+]
+
+[project.urls]
+homepage = "https://github.com/sondregronas/turtletranslate"
