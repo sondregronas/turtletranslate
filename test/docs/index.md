@@ -1,5 +1,7 @@
 ---
 title: Lost in Translation
+summary: En turist prøver å kommunisere på norsk
+tags: [norsk, turist, kommunikasjon]
 ---
 
 # 🌍 Lost in Translation

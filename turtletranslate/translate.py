@@ -1,9 +1,10 @@
+import json
 import timeit
 from functools import lru_cache
 
 import ollama
 
-from turtletranslate import TurtleTranslateData, TurtleTranslateException
+from turtletranslate.exceptions import TurtleTranslateException
 from turtletranslate.logger import logger
 from turtletranslate.models import (
     SUMMARIZER_CRITIC_PROMPT,
@@ -14,6 +15,7 @@ from turtletranslate.models import (
     TRANSLATION_CRITIC_SYSTEM,
     TRANSLATION_WORKER_PROMPT,
     TRANSLATION_WORKER_SYSTEM,
+    FRONTMATTER_TRANSLATION_WORKER_PROMPT,
 )
 
 TRANSLATE_TYPES = {
@@ -21,6 +23,7 @@ TRANSLATE_TYPES = {
     "summary_worker": (SUMMARIZER_WORKER_SYSTEM, SUMMARIZER_WORKER_PROMPT),
     "translation_critic": (TRANSLATION_CRITIC_SYSTEM, TRANSLATION_CRITIC_PROMPT),
     "translation_worker": (TRANSLATION_WORKER_SYSTEM, TRANSLATION_WORKER_PROMPT),
+    "frontmatter_worker": (TRANSLATION_WORKER_SYSTEM, FRONTMATTER_TRANSLATION_WORKER_PROMPT),
 }
 
 
@@ -35,7 +38,7 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
         logger.info(f"Downloaded {model}")
 
 
-def _prompt(data: TurtleTranslateData, type: str) -> ollama.GenerateResponse:
+def _prompt(data, type: str) -> ollama.GenerateResponse:
     system = TRANSLATE_TYPES[type][0].format(**data.format())
     prompt = TRANSLATE_TYPES[type][1].format(**data.format())
     _download_model_if_not_exists(data.client, data.model)
@@ -51,7 +54,7 @@ def _prompt(data: TurtleTranslateData, type: str) -> ollama.GenerateResponse:
     return response
 
 
-def approve_summary(data: TurtleTranslateData) -> bool:
+def approve_summary(data) -> bool:
     logger.info("Reviewing summary")
     text = _prompt(data, "summary_critic").response
 
@@ -60,22 +63,26 @@ def approve_summary(data: TurtleTranslateData) -> bool:
     logger.error(f"Summary did not meet the criteria. Reason: {text}")
 
 
-def generate_summary(data: TurtleTranslateData, _attempts: int = 0) -> str:
-    if _attempts >= data._max_attempts:
-        logger.error(f"Could not generate summary after {_attempts} attempts.")
-        raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
-    logger.info(f"Generating summary, attempt {_attempts + 1}")
+def generate_summary(data, _attempts: int = 0) -> str:
+    # We can reuse the cache if we call the function with the same data (i.e. translating to multiple languages)
+    @lru_cache
+    def _generate_summary(_):
+        if _attempts >= data._max_attempts:
+            logger.error(f"Could not generate summary after {_attempts} attempts.")
+            raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
+        logger.info(f"Generating summary, attempt {_attempts + 1}")
 
-    data._summary = _prompt(data, "summary_worker").response
+        data._summary = _prompt(data, "summary_worker").response
 
-    if not approve_summary(data):
-        return generate_summary(data, _attempts + 1)
+        if not approve_summary(data):
+            return generate_summary(data, _attempts + 1)
+        logger.info("Summary generated successfully!")
+        return data._summary
 
-    logger.info("Summary generated successfully!")
-    return data._summary
+    return _generate_summary(data.document)
 
 
-def approve_translation(data: TurtleTranslateData) -> bool:
+def approve_translation(data) -> bool:
     logger.info("Reviewing translation")
     text = _prompt(data, "translation_critic").response
 
@@ -84,22 +91,22 @@ def approve_translation(data: TurtleTranslateData) -> bool:
     logger.error(f"Translation did not meet the criteria. Reason: {text}")
 
 
-def translate_section(data: TurtleTranslateData, _attempts: int = 0) -> str:
+def translate_section(data, _attempts: int = 0) -> str:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
     logger.info(f"Translating section, attempt {_attempts + 1}")
 
-    data._section = _prompt(data, "translation_worker").response
+    data._translated_section = _prompt(data, "translation_worker").response
 
     if not approve_translation(data):
         return translate_section(data, _attempts + 1)
 
     logger.info("Section translated successfully!")
-    return data._section
+    return data._translated_section
 
 
-def translate_sections(data: TurtleTranslateData) -> list[str]:
+def translate_sections(data) -> list[str]:
     logger.info("Translating sections")
     data._translated_sections = []
     for section in data._sections:
@@ -107,3 +114,29 @@ def translate_sections(data: TurtleTranslateData) -> list[str]:
         data._translated_sections.append(translate_section(data))
 
     return data._translated_sections
+
+
+def translate_frontmatter(data, _attempts: int = 0) -> dict:
+    if _attempts >= data._max_attempts:
+        logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
+        raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
+    logger.info("Translating frontmatter")
+    try:
+        data.translated_frontmatter = json.loads(_prompt(data, "frontmatter_worker").response)
+        for key in data.translated_frontmatter:
+            if key not in data._original_frontmatter:
+                logger.error(f"Translated frontmatter key {key} not found in original frontmatter")
+                return translate_frontmatter(data, _attempts + 1)
+    except json.JSONDecodeError:
+        logger.error("Failed to decode JSON response")
+        return translate_frontmatter(data, _attempts + 1)
+    return data.translated_frontmatter
+
+
+def translate(data) -> str:
+    logger.info(f"Translating document from {data.source_language} to {data.target_language}")
+    generate_summary(data)
+    translate_frontmatter(data)
+    translate_sections(data)
+    logger.info("Successfully translated document!")
+    return data.reconstruct_translated_document()
