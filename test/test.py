@@ -13,7 +13,6 @@ client = ollama.Client(os.getenv("OLLAMA_SERVER", "127.0.0.1"))
 prepend_md = """> [!NOTE] Dette er en AI generert oversettelse som kan inneholde feil eller mangler.\n"""
 languages = ["English"]
 models = [
-    "deepseek-r1",
     "phi4",
     "llama3.2",
     "llama3.1",
