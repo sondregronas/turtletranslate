@@ -13,11 +13,11 @@ client = ollama.Client(os.getenv("OLLAMA_SERVER", "127.0.0.1"))
 prepend_md = """> [!NOTE] Dette er en AI generert oversettelse som kan inneholde feil eller mangler.\n"""
 languages = ["English"]
 models = [
-    "phi4",
     "llama3.2",
     "llama3.1",
     "mistral",
     "gemma:7b",
+    "phi4",
 ]
 logger.setLevel(DEBUG)
 
@@ -53,10 +53,15 @@ def translate(model, document):
 
 
 DNF = []
+TIME_TO_COMPLETE = []
+import timeit
+
 for model in models:
     for document in Path(Path(__file__).parent / "docs").glob("*.md"):
         try:
+            start = timeit.default_timer()
             translate(model, document)
+            TIME_TO_COMPLETE.append((model, document, timeit.default_timer() - start))
         except Exception as e:
             logger.error(f"{model} DID NOT FINISH ({document}): {e}")
             DNF.append((model, document))
@@ -64,3 +69,6 @@ for model in models:
 
 for model, document in DNF:
     logger.info(f"Did not finish ({model}, {document})")
+
+for model, document, time in TIME_TO_COMPLETE:
+    logger.info(f"Finished {model} in {time} seconds ({document})")
