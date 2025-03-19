@@ -128,13 +128,18 @@ def translate_sections(data) -> list[str]:
     return data._translated_sections
 
 
+def extrapolate_json(text: str) -> dict:
+    text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
+    return json.loads(text)
+
+
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
     logger.info("Translating frontmatter")
     try:
-        new_fm = json.loads(_prompt(data, "frontmatter_worker").response)
+        new_fm = extrapolate_json(_prompt(data, "frontmatter_worker").response)
         data.translated_frontmatter = new_fm
         for key in new_fm.keys():
             if key not in data.frontmatter.keys():
@@ -145,6 +150,8 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     except json.JSONDecodeError:
         logger.error("Failed to decode JSON response")
         return translate_frontmatter(data, _attempts + 1)
+
+    # TODO: Reviewing the frontmatter translation, might not be necessary
     return data.translated_frontmatter
 
 
