@@ -6,6 +6,7 @@ import ollama
 from dotenv import load_dotenv
 
 from turtletranslate import TurtleTranslator
+from turtletranslate.exceptions import TurtleTranslateException
 from turtletranslate.logger import logger
 
 load_dotenv()
@@ -62,7 +63,7 @@ for model in models:
             start = timeit.default_timer()
             translate(model, document)
             TIME_TO_COMPLETE.append((model, document, timeit.default_timer() - start))
-        except Exception as e:
+        except (Exception, TurtleTranslateException) as e:
             logger.error(f"{model} DID NOT FINISH ({document}): {e}")
             DNF.append((model, document))
             continue

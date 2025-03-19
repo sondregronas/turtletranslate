@@ -134,9 +134,10 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
     logger.info("Translating frontmatter")
     try:
-        data.translated_frontmatter = json.loads(_prompt(data, "frontmatter_worker").response)
-        for key in data.translated_frontmatter:
-            if key not in data.frontmatter:
+        new_fm = json.loads(_prompt(data, "frontmatter_worker").response)
+        data.translated_frontmatter = new_fm
+        for key in new_fm.keys():
+            if key not in data.frontmatter.keys():
                 logger.error(
                     f"Translated frontmatter key {key} does not exist in original frontmatter (AI Hallucination)"
                 )
