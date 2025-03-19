@@ -18,7 +18,7 @@ SUMMARIZER_CRITIC_SYSTEM = """\
 You are an experienced editor specializing in evaluating document summaries. Your role is to determine if a given summary accurately and comprehensively represents the key points of the original markdown document written in {source_language}.
 """
 SUMMARIZER_CRITIC_PROMPT = """\
-Review the following summary for the markdown document provided. Answer only with "YES" if fully satisfactory, or "NO <Explanation>" if it misses any critical information from the original document.
+Review the following summary for the markdown document provided. Answer only with "YES" if fully satisfactory, or "NO - Explanation:" if it misses any critical information from the original document.
 
 Original Markdown Document:
 --- DOCUMENT START ---

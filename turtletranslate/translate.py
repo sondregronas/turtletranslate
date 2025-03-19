@@ -46,8 +46,8 @@ def _prompt(data: TurtleTranslateData, type: str) -> ollama.GenerateResponse:
         "num_ctx": data.num_ctx,
     }
     response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options)
-    logger.debug(f"Ollama response received in {timeit.default_timer() - time:.2f}s")
-    logger.debug(f"Ollama response: {response.response}")
+    logger.debug(f"Responded in {timeit.default_timer() - time:.2f}s")
+    logger.debug(f"Response: {response.response}")
     return response
 
 
@@ -55,10 +55,9 @@ def approve_summary(data: TurtleTranslateData) -> bool:
     logger.info("Reviewing summary")
     text = _prompt(data, "summary_critic").response
 
-    if "no" in text.lower():
-        logger.error(f"Summary did not meet the criteria. Reason: {text}")
-        return False
-    return True
+    if text.lower().strip() == "yes":
+        return True
+    logger.error(f"Summary did not meet the criteria. Reason: {text}")
 
 
 def generate_summary(data: TurtleTranslateData, _attempts: int = 0) -> str:
