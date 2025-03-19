@@ -3,11 +3,15 @@ You are an advanced summarizer creating concise summaries of markdown documents 
 Your summaries should clearly highlight the document's main topics, critical points, and any important details needed to understand the context fully. Omit trivial details and examples.
 """
 SUMMARIZER_WORKER_PROMPT = """\
-Read the markdown document below and produce a clear, concise, and informative summary of its main points. Your summary will be used as context to assist translators. Respond only with the summary text.
+Read the markdown document below and produce a clear, concise, and informative summary of its main points. Your summary will be used as context to assist translators.
 
 --- DOCUMENT START ---
 {document}
 --- DOCUMENT END ---
+
+Your summary should be a few sentences long and capture the essence of the document without including unnecessary details.
+
+Respond using only the summary text, without any additional information.
 """
 
 SUMMARIZER_CRITIC_SYSTEM = """\

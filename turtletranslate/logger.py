@@ -1,8 +1,8 @@
 import logging
-from logging import getLogger, StreamHandler, DEBUG, INFO
+from logging import getLogger, StreamHandler, INFO
 
 logger = getLogger("turtletranslate")
-logger.setLevel(DEBUG)
+logger.setLevel(INFO)
 
 
 class ColorFormatter(logging.Formatter):
@@ -34,7 +34,5 @@ class ColorFormatter(logging.Formatter):
 
 stream_formatter = ColorFormatter("[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 streamhandler = StreamHandler()
-streamhandler.setLevel(INFO)
 streamhandler.setFormatter(stream_formatter)
-
 logger.addHandler(streamhandler)

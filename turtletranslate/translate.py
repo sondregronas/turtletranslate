@@ -1,3 +1,6 @@
+import timeit
+from functools import lru_cache
+
 import ollama
 
 from turtletranslate import TurtleTranslateData, TurtleTranslateException
@@ -21,20 +24,31 @@ TRANSLATE_TYPES = {
 }
 
 
-def _download_model_if_not_exists(data: TurtleTranslateData) -> None:
+@lru_cache
+def _download_model_if_not_exists(client: ollama.Client, model: str):
+    logger.info(f"Checking if model {model} exists")
     try:
-        data.client.show(data.model)
+        client.show(model)
     except ollama.ResponseError:
-        logger.info(f"Downloading {data.model}")
-        data.client.pull(data.model)
-        logger.info(f"Downloaded {data.model}")
+        logger.info(f"Downloading {model}")
+        client.pull(model)
+        logger.info(f"Downloaded {model}")
 
 
 def _prompt(data: TurtleTranslateData, type: str) -> ollama.GenerateResponse:
     system = TRANSLATE_TYPES[type][0].format(**data.format())
     prompt = TRANSLATE_TYPES[type][1].format(**data.format())
-    _download_model_if_not_exists(data)
-    return data.client.generate(model=data.model, prompt=prompt, system=system)
+    _download_model_if_not_exists(data.client, data.model)
+
+    logger.debug("Querying Ollama")
+    time = timeit.default_timer()
+    options = {
+        "num_ctx": data.num_ctx,
+    }
+    response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options)
+    logger.debug(f"Ollama response received in {timeit.default_timer() - time:.2f}s")
+    logger.debug(f"Ollama response: {response.response}")
+    return response
 
 
 def approve_summary(data: TurtleTranslateData) -> bool:
