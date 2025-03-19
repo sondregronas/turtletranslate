@@ -67,8 +67,8 @@ def approve_summary(data) -> bool:
 
 
 @lru_cache
-def hash_document(document: str) -> str:
-    return hashlib.sha256(document.encode()).hexdigest()
+def hash_document(document: str, num_ctx: int) -> str:
+    return hashlib.sha256(f"{document}-{num_ctx}".encode()).hexdigest()
 
 
 def _generate_summary(data, _attempts: int = 0) -> str:
@@ -86,11 +86,11 @@ def _generate_summary(data, _attempts: int = 0) -> str:
 
 
 def generate_summary(data) -> str:
-    if hash_document(data.document) in SUMMARY_CACHE:
+    if hash_document(data.document, data.num_ctx) in SUMMARY_CACHE:
         logger.debug("Using cached summary")
-        return SUMMARY_CACHE[hash_document(data.document)]
+        return SUMMARY_CACHE[hash_document(data.document, data.num_ctx)]
     summary = _generate_summary(data)
-    SUMMARY_CACHE[hash_document(data.document)] = summary
+    SUMMARY_CACHE[hash_document(data.document, data.num_ctx)] = summary
     return summary
 
 
