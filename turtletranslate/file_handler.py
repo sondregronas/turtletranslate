@@ -4,10 +4,11 @@ import yaml
 
 DELIMITERS = "|".join(
     [
-        r"={3}\s",  # Content blocks
         r"#{1,6}\s",  # Headers
-        r"[^\S\r\n]*(?:> ?)+ *\[![^\]]*\][\-\+]?",  # Callouts
-        r"`{3}",  # Code blocks
+        # These are commented out because they can cause extra hallucinations in the translation, omitting them for now
+        # r"={3}\s",  # Content blocks  # Not a problem so far, but might give inconsistent spacing
+        # r"[^\S\r\n]*(?:> ?)+ *\[![^\]]*\][\-\+]?",  # Callouts (NOTE: this one seems to be extra problematic in nested blocks)
+        # r"`{3}",  # Code blocks (NOTE: This one seems to add extra ``` symbols (or remove them) in the translation)
     ]
 )
 
@@ -40,7 +41,7 @@ def _get_sections(markdown: str) -> list[str]:
     markdown = _prep_codefences(markdown)
 
     sections = re.split(rf"\n({DELIMITERS})(?!\n[^\S\r\n]*{DELIMITERS})", markdown)
-    sections = [s for s in sections if s.strip()]
+    sections = [s.strip("\n") for s in sections if s.strip()]
     sections = [f"{sections[i]}{sections[i + 1]}" for i in range(0, len(sections), 2)]
     return [_unprep_codefences(s) for s in sections]
 
@@ -67,7 +68,5 @@ def reconstruct(frontmatter: dict, sections: list[str]) -> str:
     :return: The reconstructed markdown string.
     """
     frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
-    # Add a newline to every section to avoid merging them, but not if they end with a > symbol
-    sections = [f"{s}\n" if not s.strip().endswith(">") else s for s in sections]
-    sections_str = "\n".join(sections)
+    sections_str = "\n\n".join(sections)
     return f"---\n{frontmatter_str}---\n\n{sections_str}"

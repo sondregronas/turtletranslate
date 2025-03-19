@@ -19,8 +19,9 @@ languages = [
     "English",
 ]
 models = [
-    "llama3.2",
     "llama3.1",
+    "llama3.2",
+    "llama3.3",
     "mistral",
     "gemma:7b",
     "phi4",
@@ -30,6 +31,7 @@ context_sizes = [
     8 * 1024,
     16 * 1024,
     32 * 1024,
+    64 * 1024,
 ]
 
 logger.setLevel(DEBUG)
