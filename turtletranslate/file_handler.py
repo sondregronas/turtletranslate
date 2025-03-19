@@ -107,7 +107,6 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
     return frontmatter, sections
 
 
-@lru_cache
 def reconstruct(frontmatter: dict, sections: list[str]) -> str:
     """
     Reconstruct a markdown string from frontmatter and sections.
