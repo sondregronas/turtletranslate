@@ -209,13 +209,15 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
-    logger.info(
-        f"Translating section ({_current_section}/{len(data._sections)}). Attempt {_attempts + 1}/{data._max_attempts}"
-    )
-
     # Extract the token and section for the prompt only
     original_section = data._section.copy()
     token, section = list(data._section.items())[0]
+
+    section_txt = f"\033[33m(Section {_current_section}/{len(data._sections)}),\033[0m"
+    attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
+    type_txt = f"\033[35m(Type: {token})\033[0m"
+    logger.info(f"Translating... {section_txt} {attempt_txt} {type_txt}")
+
     data._section = section
     translated_section = _prompt(data, f"translation_worker_{token}").response.rstrip()
     data._translated_section = translated_section
@@ -224,7 +226,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
         data._section = original_section
         return _translate_section(data, _attempts + 1, _current_section=_current_section)
 
-    logger.info("Section translated successfully!")
+    logger.debug("Section translated successfully!")
     data._translated_section = {token: translated_section}
     return data._translated_section
 
