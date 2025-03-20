@@ -40,5 +40,6 @@ class TurtleTranslator:
     source_language: str = "English"
     target_language: str = "Spanish"
     prepend_md: str = ""  # Markdown to prepend to the translated document (i.e. "> NOTE: This is a machine generated translation.")
-    _max_attempts: int = 100
+    review: bool = True  # Whether to enable the review process (critique and revision)
+    _max_attempts: int = 100  # Maximum number of attempts to make before giving up on a translation
 ```

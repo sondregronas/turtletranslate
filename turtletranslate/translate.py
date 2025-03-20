@@ -157,6 +157,8 @@ def hash_document(document: str, num_ctx: int) -> str:
 
 def _approve_summary(data) -> bool:
     """Approve the summary, or retry if it does not meet the criteria."""
+    if not data.review:
+        return True
     logger.info("Reviewing summary")
     text = _prompt(data, "summary_critic").response
 
@@ -172,7 +174,9 @@ def _generate_summary(data, _attempts: int = 0) -> str:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not generate summary after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
-    logger.info(f"Generating summary. Attempt {_attempts + 1}/{data._max_attempts}")
+
+    attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
+    logger.info(f"Generating summary. {attempt_txt}")
 
     data._summary = _prompt(data, "summary_worker").response.rstrip()
 
@@ -194,6 +198,8 @@ def generate_summary(data) -> str:
 
 def _approve_translation(data, token) -> bool:
     """Approve the translation, or retry if it does not meet the criteria."""
+    if not data.review:
+        return True
     logger.debug("Reviewing translation")
     text = _prompt(data, f"translation_critic_{token}").response
 
@@ -269,7 +275,8 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
-    logger.info(f"Translating frontmatter. Attempt {_attempts + 1}/{data._max_attempts}")
+    attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
+    logger.info(f"Translating frontmatter. {attempt_txt}")
     try:
         new_fm = extrapolate_json(_prompt(data, "frontmatter_worker").response)
         data.translated_frontmatter = new_fm
