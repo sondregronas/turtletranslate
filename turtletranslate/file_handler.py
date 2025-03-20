@@ -35,7 +35,7 @@ delimiter_regex = re.compile(rf"(?:\n|^)({DELIMITERS})\n*", re.MULTILINE)
 
 def _prep_codefences(markdown: str) -> str:
     """We need to replace newlines in codefences with a placeholder to avoid splitting them into sections."""
-    codefences = re.findall(r"```.*?```", markdown, re.DOTALL)
+    codefences = re.findall(r"\n```.*?```", markdown, re.DOTALL)
     for codefence in codefences:
         markdown = markdown.replace(codefence, codefence.replace("\n", "\n!%CODEFENCE%!"))
     return markdown
@@ -138,5 +138,7 @@ def reconstruct(frontmatter: dict, sections: list[dict[str, str]]) -> str:
     :return: The reconstructed markdown string.
     """
     frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
+    if frontmatter_str.strip() == "{}":
+        frontmatter_str = ""
     sections_str = "\n\n".join([list(s.values())[0] for s in sections])
     return f"---\n{frontmatter_str}---\n\n{sections_str}"

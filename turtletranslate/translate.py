@@ -272,6 +272,9 @@ def extrapolate_json(text: str) -> dict:
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
     """Translate the relevant frontmatter keys (TRANSLATABLE_FRONTMATTER_KEYS) in the frontmatter."""
+    if not data.frontmatter:
+        logger.debug("No frontmatter to translate")
+        return dict()
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
