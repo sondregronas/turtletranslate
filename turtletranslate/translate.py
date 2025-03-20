@@ -174,7 +174,7 @@ def _generate_summary(data, _attempts: int = 0) -> str:
         raise TurtleTranslateException(f"Could not generate summary after {_attempts} attempts.")
     logger.info(f"Generating summary. Attempt {_attempts + 1}/{data._max_attempts}")
 
-    data._summary = _prompt(data, "summary_worker").response
+    data._summary = _prompt(data, "summary_worker").response.rstrip()
 
     if not _approve_summary(data):
         return _generate_summary(data, _attempts + 1)
@@ -217,7 +217,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     original_section = data._section.copy()
     token, section = list(data._section.items())[0]
     data._section = section
-    translated_section = _prompt(data, f"translation_worker_{token}").response
+    translated_section = _prompt(data, f"translation_worker_{token}").response.rstrip()
     data._translated_section = translated_section
 
     if not _approve_translation(data, token):
