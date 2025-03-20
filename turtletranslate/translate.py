@@ -44,12 +44,12 @@ TRANSLATE_TYPES = {
     "translation_critic_wildcard": (
         TRANSLATION_CRITIC_WILDCARD_SYSTEM,
         TRANSLATION_CRITIC_WILDCARD_PROMPT,
-        CREATIVE,
+        LENIENT,
     ),
     "translation_critic_codefence": (
         TRANSLATION_CRITIC_CODEFENCE_SYSTEM,
         TRANSLATION_CRITIC_CODEFENCE_PROMPT,
-        STRICT,
+        LENIENT,
     ),
     "translation_critic_article": (
         TRANSLATION_CRITIC_ARTICLE_SYSTEM,
@@ -59,7 +59,7 @@ TRANSLATE_TYPES = {
     "translation_critic_blockquote": (
         TRANSLATION_CRITIC_BLOCKQUOTE_SYSTEM,
         TRANSLATION_CRITIC_BLOCKQUOTE_PROMPT,
-        CREATIVE,
+        LENIENT,
     ),
     "summary_critic": (
         SUMMARIZER_CRITIC_SYSTEM,
