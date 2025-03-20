@@ -243,6 +243,7 @@ def translate_sections(data) -> list[dict[str, str]]:
 
 def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
+    text = text.encode("unicode_escape").decode("utf-8")
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
     # For every line, check if it has more than 4 double quotes, if yes, replace every the 3 to -1 double quotes with a \"
     new_text = ""
