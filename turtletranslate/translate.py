@@ -219,7 +219,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     original_section = data._section.copy()
     token, section = list(data._section.items())[0]
 
-    section_txt = f"\033[33m(Section {_current_section}/{len(data._sections)}),\033[0m"
+    section_txt = f"\033[33m(Section {_current_section}/{len(data._sections)})\033[0m"
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
     type_txt = f"\033[35m(Type: {token})\033[0m"
     logger.info(f"Translating... {section_txt} {attempt_txt} {type_txt}")
