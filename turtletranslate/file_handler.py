@@ -57,7 +57,7 @@ def _get_frontmatter(markdown: str) -> dict:
 def _cleanup_sections(sections: list[str]) -> list[str]:
     """Merge sections that should be merged, i.e. headers with the following section, and remove duplicate selections."""
 
-    sections = [s.strip("\n") for s in sections if s and s.strip()]
+    sections = [s.rstrip("\n") for s in sections if s and s.strip()]
 
     def should_merge(section: str) -> bool:
         mergable_symbols = ["#"]
