@@ -1,6 +1,7 @@
 import ast
 import hashlib
 import json
+import re
 import timeit
 from functools import lru_cache
 
@@ -9,52 +10,56 @@ import ollama
 from turtletranslate.exceptions import TurtleTranslateException
 from turtletranslate.logger import logger
 from turtletranslate.models import (
-    SUMMARIZER_CRITIC_PROMPT,
     SUMMARIZER_CRITIC_SYSTEM,
-    SUMMARIZER_WORKER_PROMPT,
+    SUMMARIZER_CRITIC_PROMPT,
     SUMMARIZER_WORKER_SYSTEM,
-    TRANSLATION_CRITIC_SYSTEM_BLOCKQUOTE,
-    TRANSLATION_CRITIC_PROMPT_BLOCKQUOTE,
-    TRANSLATION_CRITIC_SYSTEM_ARTICLE,
-    TRANSLATION_CRITIC_PROMPT_ARTICLE,
-    TRANSLATION_CRITIC_SYSTEM_CODEFENCE,
-    TRANSLATION_CRITIC_PROMPT_CODEFENCE,
-    TRANSLATION_CRITIC_SYSTEM_WILDCARD,
-    TRANSLATION_CRITIC_PROMPT_WILDCARD,
-    TRANSLATION_WORKER_SYSTEM_BLOCKQUOTE,
-    TRANSLATION_WORKER_SYSTEM_ARTICLE,
-    TRANSLATION_WORKER_SYSTEM_CODEFENCE,
-    TRANSLATION_WORKER_SYSTEM_WILDCARD,
-    TRANSLATION_WORKER_PROMPT_WILDCARD,
-    TRANSLATION_WORKER_PROMPT_CODEFENCE,
-    TRANSLATION_WORKER_PROMPT_ARTICLE,
-    TRANSLATION_WORKER_PROMPT_BLOCKQUOTE,
+    SUMMARIZER_WORKER_PROMPT,
+    TRANSLATION_CRITIC_BLOCKQUOTE_SYSTEM,
+    TRANSLATION_CRITIC_BLOCKQUOTE_PROMPT,
+    TRANSLATION_CRITIC_ARTICLE_SYSTEM,
+    TRANSLATION_CRITIC_ARTICLE_PROMPT,
+    TRANSLATION_CRITIC_CODEFENCE_SYSTEM,
+    TRANSLATION_CRITIC_CODEFENCE_PROMPT,
+    TRANSLATION_CRITIC_WILDCARD_SYSTEM,
+    TRANSLATION_CRITIC_WILDCARD_PROMPT,
+    TRANSLATION_WORKER_BLOCKQUOTE_SYSTEM,
+    TRANSLATION_WORKER_BLOCKQUOTE_PROMPT,
+    TRANSLATION_WORKER_ARTICLE_SYSTEM,
+    TRANSLATION_WORKER_ARTICLE_PROMPT,
+    TRANSLATION_WORKER_CODEFENCE_SYSTEM,
+    TRANSLATION_WORKER_CODEFENCE_PROMPT,
+    TRANSLATION_WORKER_WILDCARD_SYSTEM,
+    TRANSLATION_WORKER_WILDCARD_PROMPT,
     FRONTMATTER_WORKER_SYSTEM,
     FRONTMATTER_WORKER_PROMPT,
+    PREPEND_TRANSLATION_WORKER_SYSTEM,
+    PREPEND_TRANSLATION_WORKER_PROMPT,
+    PREPEND_TRANSLATION_CRITIC_SYSTEM,
+    PREPEND_TRANSLATION_CRITIC_PROMPT,
 )
 from turtletranslate.parameters import DEFAULT_OPTIONS, STRICT, LENIENT, CREATIVE  # noqa: F401
 
 TRANSLATE_TYPES = {
     # Critics
     "translation_critic_wildcard": (
-        TRANSLATION_CRITIC_SYSTEM_WILDCARD,
-        TRANSLATION_CRITIC_PROMPT_WILDCARD,
-        DEFAULT_OPTIONS,
+        TRANSLATION_CRITIC_WILDCARD_SYSTEM,
+        TRANSLATION_CRITIC_WILDCARD_PROMPT,
+        CREATIVE,
     ),
     "translation_critic_codefence": (
-        TRANSLATION_CRITIC_SYSTEM_CODEFENCE,
-        TRANSLATION_CRITIC_PROMPT_CODEFENCE,
+        TRANSLATION_CRITIC_CODEFENCE_SYSTEM,
+        TRANSLATION_CRITIC_CODEFENCE_PROMPT,
         STRICT,
     ),
     "translation_critic_article": (
-        TRANSLATION_CRITIC_SYSTEM_ARTICLE,
-        TRANSLATION_CRITIC_PROMPT_ARTICLE,
-        DEFAULT_OPTIONS,
+        TRANSLATION_CRITIC_ARTICLE_SYSTEM,
+        TRANSLATION_CRITIC_ARTICLE_PROMPT,
+        CREATIVE,
     ),
     "translation_critic_blockquote": (
-        TRANSLATION_CRITIC_SYSTEM_BLOCKQUOTE,
-        TRANSLATION_CRITIC_PROMPT_BLOCKQUOTE,
-        STRICT,
+        TRANSLATION_CRITIC_BLOCKQUOTE_SYSTEM,
+        TRANSLATION_CRITIC_BLOCKQUOTE_PROMPT,
+        CREATIVE,
     ),
     "summary_critic": (
         SUMMARIZER_CRITIC_SYSTEM,
@@ -65,33 +70,43 @@ TRANSLATE_TYPES = {
     "summary_worker": (
         SUMMARIZER_WORKER_SYSTEM,
         SUMMARIZER_WORKER_PROMPT,
-        CREATIVE,
+        STRICT,
     ),
     "frontmatter_worker": (
         FRONTMATTER_WORKER_SYSTEM,
         FRONTMATTER_WORKER_PROMPT,
-        LENIENT,
+        STRICT,
     ),
     # Token specific workers
     "translation_worker_wildcard": (
-        TRANSLATION_WORKER_SYSTEM_WILDCARD,
-        TRANSLATION_WORKER_PROMPT_WILDCARD,
-        LENIENT,
+        TRANSLATION_WORKER_WILDCARD_SYSTEM,
+        TRANSLATION_WORKER_WILDCARD_PROMPT,
+        STRICT,
     ),
     "translation_worker_codefence": (
-        TRANSLATION_WORKER_SYSTEM_CODEFENCE,
-        TRANSLATION_WORKER_PROMPT_CODEFENCE,
-        LENIENT,
+        TRANSLATION_WORKER_CODEFENCE_SYSTEM,
+        TRANSLATION_WORKER_CODEFENCE_PROMPT,
+        STRICT,
     ),
     "translation_worker_article": (
-        TRANSLATION_WORKER_SYSTEM_ARTICLE,
-        TRANSLATION_WORKER_PROMPT_ARTICLE,
-        LENIENT,
+        TRANSLATION_WORKER_ARTICLE_SYSTEM,
+        TRANSLATION_WORKER_ARTICLE_PROMPT,
+        STRICT,
     ),
     "translation_worker_blockquote": (
-        TRANSLATION_WORKER_SYSTEM_BLOCKQUOTE,
-        TRANSLATION_WORKER_PROMPT_BLOCKQUOTE,
-        LENIENT,
+        TRANSLATION_WORKER_BLOCKQUOTE_SYSTEM,
+        TRANSLATION_WORKER_BLOCKQUOTE_PROMPT,
+        STRICT,
+    ),
+    "translation_critic_prepend": (
+        PREPEND_TRANSLATION_CRITIC_SYSTEM,
+        PREPEND_TRANSLATION_CRITIC_PROMPT,
+        CREATIVE,
+    ),
+    "translation_worker_prepend": (
+        PREPEND_TRANSLATION_WORKER_SYSTEM,
+        PREPEND_TRANSLATION_WORKER_PROMPT,
+        STRICT,
     ),
 }
 
@@ -142,7 +157,7 @@ def _approve_summary(data) -> bool:
     logger.info("Reviewing summary")
     text = _prompt(data, "summary_critic").response
 
-    if text.lower().strip() == "yes":
+    if text.lower().strip().startswith("yes"):
         data._critique = ""
         return True
     data._critique = text
@@ -179,7 +194,7 @@ def _approve_translation(data, token) -> bool:
     logger.debug("Reviewing translation")
     text = _prompt(data, f"translation_critic_{token}").response
 
-    if text.lower().strip() == "yes" or "no" not in text.lower().split():
+    if text.lower().strip().startswith("yes") or "no" not in text.lower().split():
         data._critique = ""
         return True
     data._critique = text
@@ -223,7 +238,23 @@ def translate_sections(data) -> list[dict[str, str]]:
 def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
-    return ast.literal_eval(text)
+    # For every line, check if it has more than 4 double quotes, if yes, replace every the 3 to -1 double quotes with a \"
+    new_text = ""
+    for line in text.split("\n"):
+        if not line.strip().startswith('"') or (not line.strip().endswith('"') and not line.strip().endswith('",')):
+            new_text += f"{line}\n"
+            continue
+        if line.count('"') == 4:
+            new_text += f"{line}\n"
+            continue
+        try:
+            leading, key, value, trailing = re.search(r'^(\s*)(".*?"):\s*"(.*)"(.*)', line).groups()
+        except AttributeError:
+            logger.error(f"Couldn't parse JSON from {text}")
+            raise SyntaxError(f"Couldn't parse JSON from {text}")
+        value = value.replace('"', '\\"')
+        new_text += f'{leading}{key}: "{value}"{trailing}\n'
+    return ast.literal_eval(new_text)
 
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
@@ -241,7 +272,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
                     f"Translated frontmatter key {key} does not exist in original frontmatter (AI Hallucination)"
                 )
                 return translate_frontmatter(data, _attempts + 1)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, SyntaxError):
         logger.error("Failed to decode JSON response")
         return translate_frontmatter(data, _attempts + 1)
 

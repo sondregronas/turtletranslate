@@ -25,6 +25,7 @@ TOKENS = {
     "```": "codefence",  # Code fences in their entirety (not including inside blockquotes)
 }
 DEFAULT_TOKEN = "wildcard"
+PREPEND_TOKEN = "prepend"
 
 # TODO: Adding sections to a dictionary with the section type as the key, and the section as the value, would
 #       allow for separate translation handling for different section types, i.e. admonitions, code blocks, etc.
@@ -126,8 +127,7 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[dict[str, str
     frontmatter = _get_frontmatter(markdown)
     sections = _get_sections(markdown)
     if prepend_md:
-        section = _tokenize_sections([prepend_md.strip()])
-        sections.insert(0, section[0])
+        sections.insert(0, {PREPEND_TOKEN: prepend_md})
     return frontmatter, sections
 
 
