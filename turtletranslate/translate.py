@@ -134,6 +134,9 @@ def _prompt(data, type: str, review: str = "") -> ollama.GenerateResponse:
     opts = TRANSLATE_TYPES[type][2]
     _download_model_if_not_exists(data.client, data.model)
 
+    logger.debug(f"Prompt: {prompt}")
+    logger.debug(f"System: {system}")
+
     logger.debug("Querying Ollama")
     time = timeit.default_timer()
     options = {
@@ -215,13 +218,14 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     token, section = list(data._section.items())[0]
     data._section = section
     translated_section = _prompt(data, f"translation_worker_{token}").response
-    data._translated_section = {token: translated_section}
+    data._translated_section = translated_section
 
     if not _approve_translation(data, token):
         data._section = original_section
         return _translate_section(data, _attempts + 1)
 
     logger.info("Section translated successfully!")
+    data._translated_section = {token: translated_section}
     return data._translated_section
 
 
