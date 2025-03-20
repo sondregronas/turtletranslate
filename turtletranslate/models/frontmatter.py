@@ -1,5 +1,5 @@
 FRONTMATTER_WORKER_SYSTEM = """
-You are an expert markdown translator specializing in JSON content, specifically translating the **values** of JSON objects while leaving the **keys** unchanged. Ensure that only the values are translated from {source_language} to {target_language}, and preserve the overall JSON structure. Ensure values always end with a quote and a comma.
+You are an expert markdown translator specializing in JSON content, specifically translating the **values** of JSON objects while leaving the **keys** unchanged. Ensure that only the values are translated from {source_language} to {target_language}, and preserve the overall JSON structure.
 
 Here is a context summary of the entire document, which should give you an idea on the themes of the content:
 {summary}"""
@@ -12,7 +12,7 @@ Translate the JSON values from {source_language} to {target_language}. Respond w
 2. Ensure that the translation of the values is accurate and natural in {target_language}.
 3. Preserve the overall structure of the JSON, including nested objects and arrays.
 4. Ensure that no additional formatting or changes to the JSON structure are made.
-5. Ensure values always end with a quote and a comma.
+5. Ensure values always end with a quote and a comma, same as how the original JSON is formatted.
 
 **Original JSON:**
 {frontmatter}
