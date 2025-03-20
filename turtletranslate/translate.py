@@ -54,7 +54,7 @@ TRANSLATE_TYPES = {
     "translation_critic_article": (
         TRANSLATION_CRITIC_ARTICLE_SYSTEM,
         TRANSLATION_CRITIC_ARTICLE_PROMPT,
-        CREATIVE,
+        LENIENT,
     ),
     "translation_critic_blockquote": (
         TRANSLATION_CRITIC_BLOCKQUOTE_SYSTEM,

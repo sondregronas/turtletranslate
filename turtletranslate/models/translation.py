@@ -10,6 +10,7 @@ Translate the blockquote markdown content from {source_language} to {target_lang
 3. Do NOT translate text inside special callout markers (> [!...]) which remain in the original language.
 4. Retain emojis, symbols, spaces, line breaks, and indentation precisely.
 5. Do not add or remove any content, and keep your opinion out of the translation.
+6. Keep in mind we are only translating a small section of the article at the time, so do not add any additional information, just translate the content as is.
 
 Only respond with the translated blockquote text:
 {section}"""
@@ -44,6 +45,7 @@ Translate the markdown article section from {source_language} to {target_languag
 3. Keep numerical data, dates, measurements, and units unchanged.
 4. Do not modify markdown links (anchor texts or URLs).
 5. Do not add or remove any content, and keep your opinion out of the translation.
+6. Keep in mind we are only translating a small section of the article at the time, so do not add any additional information, just translate the content as is.
 
 Only respond with the translated markdown text:
 {section}"""
@@ -77,6 +79,7 @@ Translate comments within markdown code blocks from {source_language} to {target
 2. Never modify executable code or programming syntax.
 3. Keep all spacing, indentation, special symbols, and formatting unchanged.
 4. Do not add or remove any content, and keep your opinion out of the translation.
+5. Keep in mind we are only translating a small section of the article at the time, so do not add any additional information, just translate the content as is.
 
 Only respond with the fully preserved code block with translated comments:
 {section}"""
@@ -103,7 +106,7 @@ You are an expert markdown translator tasked with translating miscellaneous mark
 TRANSLATION_WORKER_WILDCARD_PROMPT = """\
 Translate the given markdown content from {source_language} to {target_language}. Ensure semantic accuracy and exact markdown preservation.
 
-Do not add or remove any content, and keep your opinion out of the translation.
+Do not add or remove any content, and keep your opinion out of the translation. Keep in mind we are only translating a small section of the article at the time, so do not add any additional information, just translate the content as is.
 
 Only respond with the translated markdown text:
 {section}"""
