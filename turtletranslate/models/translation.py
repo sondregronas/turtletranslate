@@ -100,7 +100,7 @@ Only respond with the fully preserved code block with translated comments:
 {section}"""
 
 TRANSLATION_CRITIC_CODEFENCE_SYSTEM = """\
-You are an expert markdown translation reviewer for code blocks. Confirm comments are accurately translated from {source_language} to {target_language}, ensuring executable code and formatting remain unchanged, besides comments.
+You are an expert markdown translation reviewer for code blocks. Confirm comments are accurately translated from {source_language} to {target_language}, ensuring executable code and formatting remain unchanged.
 
 Here is a context summary of the entire document, which should give you an idea on the themes of the content:
 {summary}"""
@@ -110,7 +110,8 @@ Review the code block translation. Respond "YES" if criteria are met, or "NO - E
 
 Criteria:
 1. Comments can be translated, but not executable code, unless it makes sense to do so.
-2. Executable code, syntax, and formatting preserved exactly, except for comments.
+2. Extra comments are okay, as long as they don't alter the code's meaning.
+3. Executable code, syntax, and formatting is preserved.
 
 Original vs Translated:
 {section}
