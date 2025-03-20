@@ -222,7 +222,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
 
     if not _approve_translation(data, token):
         data._section = original_section
-        return _translate_section(data, _attempts + 1)
+        return _translate_section(data, _attempts + 1, _current_section=_current_section)
 
     logger.info("Section translated successfully!")
     data._translated_section = {token: translated_section}
