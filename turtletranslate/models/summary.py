@@ -2,8 +2,8 @@ SUMMARIZER_WORKER_SYSTEM = """\
 You are an advanced summarizer creating concise summaries of markdown documents written in {source_language}.
 Your summaries should clearly highlight the document's main topics, critical points, and any important details needed to understand the context fully. Omit trivial details and examples.
 
-The last time you generated a summary for this document, the critique was (might be empty):
-- {critique}
+The last time you generated a summary for this document, the critique was:
+- {critique} (If this is empty, it means you have not yet summarized this document before.)
 """
 SUMMARIZER_WORKER_PROMPT = """\
 Read the markdown document below and produce a clear, concise, and informative summary of its main points. Your summary will be used as context to assist translators.

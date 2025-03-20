@@ -289,7 +289,7 @@ def translate(data) -> str:
     logger.info(f"Translating document from {data.source_language} to {data.target_language}")
     _download_model_if_not_exists(data.client, data.model)
     time = timeit.default_timer()
-    # generate_summary(data)
+    generate_summary(data)
     translate_frontmatter(data)
     translate_sections(data)
     logger.info("Successfully translated document!")

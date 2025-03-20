@@ -1,6 +1,9 @@
 # Blockquote-specific system and prompt
 TRANSLATION_WORKER_BLOCKQUOTE_SYSTEM = """\
-You are an expert markdown translator specialized in translating blockquotes and callouts from {source_language} to {target_language}. Translate only the textual content, strictly preserving markdown formatting, syntax, special structures like '> [!note]', and the exact type of callouts (e.g., 'note', 'warning', 'tip')."""
+You are an expert markdown translator specialized in translating blockquotes and callouts from {source_language} to {target_language}. Translate only the textual content, strictly preserving markdown formatting, syntax, special structures like '> [!note]', and the exact type of callouts (e.g., 'note', 'warning', 'tip').
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_WORKER_BLOCKQUOTE_PROMPT = """\
 Translate the blockquote markdown content from {source_language} to {target_language}, observing the following:
@@ -16,7 +19,10 @@ Only respond with the translated blockquote text:
 {section}"""
 
 TRANSLATION_CRITIC_BLOCKQUOTE_SYSTEM = """\
-You are an expert markdown translation reviewer specialized in blockquotes and callouts. Verify translations from {source_language} to {target_language} for accuracy, naturalness, and markdown integrity, ensuring markdown syntax and special structures are preserved."""
+You are an expert markdown translation reviewer specialized in blockquotes and callouts. Verify translations from {source_language} to {target_language} for accuracy, naturalness, and markdown integrity, ensuring markdown syntax and special structures are preserved.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_CRITIC_BLOCKQUOTE_PROMPT = """\
 Review the blockquote markdown translation. Respond with "YES" if criteria are met, or "NO - Explanation:" otherwise.
@@ -35,7 +41,10 @@ Original vs Translated:
 
 # Article-specific system and prompt
 TRANSLATION_WORKER_ARTICLE_SYSTEM = """\
-You are an expert markdown translator focused on translating articles consisting of headings and paragraphs from {source_language} to {target_language}. Translate the textual content clearly and naturally, preserving all markdown structures exactly."""
+You are an expert markdown translator focused on translating articles consisting of headings and paragraphs from {source_language} to {target_language}. Translate the textual content clearly and naturally, preserving all markdown structures exactly.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_WORKER_ARTICLE_PROMPT = """\
 Translate the markdown article section from {source_language} to {target_language}, following these rules:
@@ -51,7 +60,10 @@ Only respond with the translated markdown text:
 {section}"""
 
 TRANSLATION_CRITIC_ARTICLE_SYSTEM = """\
-You are an expert markdown translation reviewer specialized in article translations, one small section at a time. Confirm translations are from {source_language} to {target_language}, and don't have any alterations to the markdown structure."""
+You are an expert markdown translation reviewer specialized in article translations, one small section at a time. Confirm translations are from {source_language} to {target_language}, and don't have any alterations to the markdown structure.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_CRITIC_ARTICLE_PROMPT = """\
 Review the markdown article translation. Respond "YES" if criteria are met, or "NO - Explanation:" otherwise.
@@ -70,7 +82,10 @@ Original vs Translated:
 
 # Codefence-specific system and prompt
 TRANSLATION_WORKER_CODEFENCE_SYSTEM = """\
-You are an expert markdown translator specializing in code blocks, translating only the comments within code from {source_language} to {target_language}. You must preserve executable code precisely, never altering the programming language, syntax, or formatting."""
+You are an expert markdown translator specializing in code blocks, translating only the comments within code from {source_language} to {target_language}. You must preserve executable code precisely, never altering the programming language, syntax, or formatting.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_WORKER_CODEFENCE_PROMPT = """\
 Translate comments within markdown code blocks from {source_language} to {target_language}. Follow these guidelines strictly:
@@ -85,7 +100,10 @@ Only respond with the fully preserved code block with translated comments:
 {section}"""
 
 TRANSLATION_CRITIC_CODEFENCE_SYSTEM = """\
-You are an expert markdown translation reviewer for code blocks. Confirm comments are accurately translated from {source_language} to {target_language}, ensuring executable code and formatting remain unchanged."""
+You are an expert markdown translation reviewer for code blocks. Confirm comments are accurately translated from {source_language} to {target_language}, ensuring executable code and formatting remain unchanged.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_CRITIC_CODEFENCE_PROMPT = """\
 Review the code block translation. Respond "YES" if criteria are met, or "NO - Explanation:" otherwise.
@@ -101,7 +119,10 @@ Original vs Translated:
 
 # Wildcard-specific system and prompt
 TRANSLATION_WORKER_WILDCARD_SYSTEM = """\
-You are an expert markdown translator tasked with translating miscellaneous markdown content from {source_language} to {target_language}. Translate textual content accurately and naturally, while strictly preserving original markdown formatting and syntax."""
+You are an expert markdown translator tasked with translating miscellaneous markdown content from {source_language} to {target_language}. Translate textual content accurately and naturally, while strictly preserving original markdown formatting and syntax.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_WORKER_WILDCARD_PROMPT = """\
 Translate the given markdown content from {source_language} to {target_language}. Ensure semantic accuracy and exact markdown preservation.
@@ -112,7 +133,10 @@ Only respond with the translated markdown text:
 {section}"""
 
 TRANSLATION_CRITIC_WILDCARD_SYSTEM = """\
-You are an expert markdown translation reviewer for miscellaneous markdown content. Verify accurate translations from {source_language} to {target_language}, maintaining all markdown integrity."""
+You are an expert markdown translation reviewer for miscellaneous markdown content. Verify accurate translations from {source_language} to {target_language}, maintaining all markdown integrity.
+
+Here is a context summary of the entire document, which should give you an idea on the themes of the content:
+{summary}"""
 
 TRANSLATION_CRITIC_WILDCARD_PROMPT = """\
 Review miscellaneous markdown translations. Respond "YES" if criteria are met, or "NO - Explanation:" otherwise.
