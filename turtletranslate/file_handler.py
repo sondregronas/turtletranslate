@@ -105,14 +105,7 @@ def _get_sections(markdown: str) -> list[dict[str, str]]:
     markdown = _prep_codefences(markdown)
     sections = delimiter_regex.split(markdown)
     sections = _cleanup_sections(sections)  # Merge headers with the following section
-
     sections = _tokenize_sections(sections)
-    if logger.level == logging.DEBUG:
-        for i, s in enumerate(sections):
-            k, v = list(s.items())[0]
-            c = v.replace("\n", "\\n").replace("\t", "\\t")
-            padding = max(len(v) for v in list(TOKENS.values()) + [DEFAULT_TOKEN])
-            logger.debug(f"\033[33mSection {i}\033[0m \033[35m{k:.<{padding}}\033[0m: \033[34m{c}\033[0m")
     return sections
 
 
@@ -127,7 +120,13 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[dict[str, str
     frontmatter = _get_frontmatter(markdown)
     sections = _get_sections(markdown)
     if prepend_md:
-        sections.insert(0, {PREPEND_TOKEN: prepend_md})
+        sections.insert(0, {PREPEND_TOKEN: prepend_md.strip()})
+    if logger.level == logging.DEBUG:
+        for i, s in enumerate(sections):
+            k, v = list(s.items())[0]
+            c = v.replace("\n", "\\n").replace("\t", "\\t")
+            padding = max(len(v) for v in list(TOKENS.values()) + [DEFAULT_TOKEN])
+            logger.debug(f"\033[33mSection {i}\033[0m \033[35m{k:.<{padding}}\033[0m: \033[34m{c}\033[0m")
     return frontmatter, sections
 
 
