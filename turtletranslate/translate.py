@@ -44,7 +44,7 @@ TRANSLATE_TYPES = {
     "translation_critic_wildcard": (
         TRANSLATION_CRITIC_WILDCARD_SYSTEM,
         TRANSLATION_CRITIC_WILDCARD_PROMPT,
-        STRICT,
+        CREATIVE,
     ),
     "translation_critic_codefence": (
         TRANSLATION_CRITIC_CODEFENCE_SYSTEM,
@@ -54,7 +54,7 @@ TRANSLATE_TYPES = {
     "translation_critic_article": (
         TRANSLATION_CRITIC_ARTICLE_SYSTEM,
         TRANSLATION_CRITIC_ARTICLE_PROMPT,
-        STRICT,
+        CREATIVE,
     ),
     "translation_critic_blockquote": (
         TRANSLATION_CRITIC_BLOCKQUOTE_SYSTEM,
