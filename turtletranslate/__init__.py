@@ -16,8 +16,8 @@ TRANSLATABLE_FRONTMATTER_KEYS = [
 class TurtleTranslator:
     client: ollama.Client
     document: str
-    model: str = "llama3.1"
-    num_ctx: int = 16 * 1024
+    model: str = "gemma3:27b-it-q4_K_M"
+    num_ctx: int = 6 * 1024
     source_language: str = "English"
     target_language: str = "Spanish"
     prepend_md: str = (
