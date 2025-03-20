@@ -19,6 +19,13 @@ DELIMITERS = "|".join(
     ]
 )
 
+TOKENS = {
+    "#": "article",  # Headers + content, up until a new delimiter
+    ">": "blockquote",  # Blockquotes in their entirety
+    "```": "codefence",  # Code fences in their entirety (not including inside blockquotes)
+}
+DEFAULT_TOKEN = "wildcard"
+
 # TODO: Adding sections to a dictionary with the section type as the key, and the section as the value, would
 #       allow for separate translation handling for different section types, i.e. admonitions, code blocks, etc.
 callout_regex = re.compile(BLOCKQUOTE_SYNTAX)
@@ -77,7 +84,20 @@ def _cleanup_sections(sections: list[str]) -> list[str]:
     return [_unprep_codefences(s) for s in merged_sections]
 
 
-def _get_sections(markdown: str) -> list[str]:
+def _tokenize_sections(sections: list[str]) -> list[dict[str, str]]:
+    """Tokenize the sections into a dictionary with the section type as the key, and the section as the value."""
+    tokens = list()
+    for section in sections:
+        for token, token_type in TOKENS.items():
+            if section.startswith(token):
+                tokens.append({token_type: section})
+                break
+        else:
+            tokens.append({DEFAULT_TOKEN: section})
+    return tokens
+
+
+def _get_sections(markdown: str) -> list[dict[str, str]]:
     """Get the sections from a markdown string as a list."""
     if markdown.startswith("---\n"):
         markdown = "".join(markdown.split("---\n")[2:])
@@ -85,15 +105,18 @@ def _get_sections(markdown: str) -> list[str]:
     sections = delimiter_regex.split(markdown)
     sections = _cleanup_sections(sections)  # Merge headers with the following section
 
+    sections = _tokenize_sections(sections)
     if logger.level == logging.DEBUG:
-        for i, x in enumerate(sections):
-            c = x.replace("\n", "\\n").replace("\t", "\\t")
-            logger.debug(f"Section {i}: {c}")
+        for i, s in enumerate(sections):
+            k, v = list(s.items())[0]
+            c = v.replace("\n", "\\n").replace("\t", "\\t")
+            padding = max(len(v) for v in list(TOKENS.values()) + [DEFAULT_TOKEN])
+            logger.debug(f"\033[33mSection {i}\033[0m \033[35m{k:.<{padding}}\033[0m: \033[34m{c}\033[0m")
     return sections
 
 
 @lru_cache
-def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
+def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[dict[str, str]]]:
     """
     Parse a markdown string into frontmatter and sections.
     :param markdown: The markdown string.
@@ -103,11 +126,12 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[str]]:
     frontmatter = _get_frontmatter(markdown)
     sections = _get_sections(markdown)
     if prepend_md:
-        sections.insert(0, prepend_md.strip())
+        section = _tokenize_sections([prepend_md.strip()])
+        sections.insert(0, section[0])
     return frontmatter, sections
 
 
-def reconstruct(frontmatter: dict, sections: list[str]) -> str:
+def reconstruct(frontmatter: dict, sections: list[dict[str, str]]) -> str:
     """
     Reconstruct a markdown string from frontmatter and sections.
     :param frontmatter: The frontmatter dictionary.
@@ -115,5 +139,5 @@ def reconstruct(frontmatter: dict, sections: list[str]) -> str:
     :return: The reconstructed markdown string.
     """
     frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
-    sections_str = "\n\n".join(sections)
+    sections_str = "\n\n".join([list(s.values())[0] for s in sections])
     return f"---\n{frontmatter_str}---\n\n{sections_str}"

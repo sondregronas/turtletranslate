@@ -1,3 +1,4 @@
+import ast
 import hashlib
 import json
 import timeit
@@ -12,27 +13,88 @@ from turtletranslate.models import (
     SUMMARIZER_CRITIC_SYSTEM,
     SUMMARIZER_WORKER_PROMPT,
     SUMMARIZER_WORKER_SYSTEM,
-    TRANSLATION_CRITIC_PROMPT,
-    TRANSLATION_CRITIC_SYSTEM,
-    TRANSLATION_WORKER_PROMPT,
-    TRANSLATION_WORKER_SYSTEM,
-    FRONTMATTER_TRANSLATION_WORKER_PROMPT,
+    TRANSLATION_CRITIC_SYSTEM_BLOCKQUOTE,
+    TRANSLATION_CRITIC_PROMPT_BLOCKQUOTE,
+    TRANSLATION_CRITIC_SYSTEM_ARTICLE,
+    TRANSLATION_CRITIC_PROMPT_ARTICLE,
+    TRANSLATION_CRITIC_SYSTEM_CODEFENCE,
+    TRANSLATION_CRITIC_PROMPT_CODEFENCE,
+    TRANSLATION_CRITIC_SYSTEM_WILDCARD,
+    TRANSLATION_CRITIC_PROMPT_WILDCARD,
+    TRANSLATION_WORKER_SYSTEM_BLOCKQUOTE,
+    TRANSLATION_WORKER_SYSTEM_ARTICLE,
+    TRANSLATION_WORKER_SYSTEM_CODEFENCE,
+    TRANSLATION_WORKER_SYSTEM_WILDCARD,
+    TRANSLATION_WORKER_PROMPT_WILDCARD,
+    TRANSLATION_WORKER_PROMPT_CODEFENCE,
+    TRANSLATION_WORKER_PROMPT_ARTICLE,
+    TRANSLATION_WORKER_PROMPT_BLOCKQUOTE,
+    FRONTMATTER_WORKER_SYSTEM,
+    FRONTMATTER_WORKER_PROMPT,
 )
+from turtletranslate.parameters import DEFAULT_OPTIONS, STRICT, LENIENT, CREATIVE  # noqa: F401
 
 TRANSLATE_TYPES = {
-    "summary_critic": (SUMMARIZER_CRITIC_SYSTEM, SUMMARIZER_CRITIC_PROMPT),
-    "summary_worker": (SUMMARIZER_WORKER_SYSTEM, SUMMARIZER_WORKER_PROMPT),
-    "translation_critic": (TRANSLATION_CRITIC_SYSTEM, TRANSLATION_CRITIC_PROMPT),
-    "translation_worker": (TRANSLATION_WORKER_SYSTEM, TRANSLATION_WORKER_PROMPT),
-    "frontmatter_worker": (TRANSLATION_WORKER_SYSTEM, FRONTMATTER_TRANSLATION_WORKER_PROMPT),
+    # Critics
+    "translation_critic_wildcard": (
+        TRANSLATION_CRITIC_SYSTEM_WILDCARD,
+        TRANSLATION_CRITIC_PROMPT_WILDCARD,
+        DEFAULT_OPTIONS,
+    ),
+    "translation_critic_codefence": (
+        TRANSLATION_CRITIC_SYSTEM_CODEFENCE,
+        TRANSLATION_CRITIC_PROMPT_CODEFENCE,
+        STRICT,
+    ),
+    "translation_critic_article": (
+        TRANSLATION_CRITIC_SYSTEM_ARTICLE,
+        TRANSLATION_CRITIC_PROMPT_ARTICLE,
+        DEFAULT_OPTIONS,
+    ),
+    "translation_critic_blockquote": (
+        TRANSLATION_CRITIC_SYSTEM_BLOCKQUOTE,
+        TRANSLATION_CRITIC_PROMPT_BLOCKQUOTE,
+        STRICT,
+    ),
+    "summary_critic": (
+        SUMMARIZER_CRITIC_SYSTEM,
+        SUMMARIZER_CRITIC_PROMPT,
+        CREATIVE,
+    ),
+    # Generic workers
+    "summary_worker": (
+        SUMMARIZER_WORKER_SYSTEM,
+        SUMMARIZER_WORKER_PROMPT,
+        CREATIVE,
+    ),
+    "frontmatter_worker": (
+        FRONTMATTER_WORKER_SYSTEM,
+        FRONTMATTER_WORKER_PROMPT,
+        LENIENT,
+    ),
+    # Token specific workers
+    "translation_worker_wildcard": (
+        TRANSLATION_WORKER_SYSTEM_WILDCARD,
+        TRANSLATION_WORKER_PROMPT_WILDCARD,
+        LENIENT,
+    ),
+    "translation_worker_codefence": (
+        TRANSLATION_WORKER_SYSTEM_CODEFENCE,
+        TRANSLATION_WORKER_PROMPT_CODEFENCE,
+        LENIENT,
+    ),
+    "translation_worker_article": (
+        TRANSLATION_WORKER_SYSTEM_ARTICLE,
+        TRANSLATION_WORKER_PROMPT_ARTICLE,
+        LENIENT,
+    ),
+    "translation_worker_blockquote": (
+        TRANSLATION_WORKER_SYSTEM_BLOCKQUOTE,
+        TRANSLATION_WORKER_PROMPT_BLOCKQUOTE,
+        LENIENT,
+    ),
 }
 
-DEFAULT_OPTIONS = {
-    "temperature": 0.2,  # Lower temperature for more deterministic results, default 0.8
-    "top_k": 10,  # Lower = conservative sampling, default 40
-    "top_p": 0.3,  # Lower = conservative sampling, default 0.9
-    "repeat_last_n": -1,  # -1 = uses context size, 0 = disabled, default 64
-}
 
 SUMMARY_CACHE = dict()  # Cache for summaries, to avoid re-generating them
 
@@ -50,22 +112,29 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
         logger.info(f"Downloaded {model}")
 
 
-def _prompt(data, type: str) -> ollama.GenerateResponse:
+def _prompt(data, type: str, review: str = "") -> ollama.GenerateResponse:
     """Prompt the Ollama API with the correct system and prompt for the given type (ENUM)."""
     system = TRANSLATE_TYPES[type][0].format(**data.format())
     prompt = TRANSLATE_TYPES[type][1].format(**data.format())
+    opts = TRANSLATE_TYPES[type][2]
     _download_model_if_not_exists(data.client, data.model)
 
     logger.debug("Querying Ollama")
     time = timeit.default_timer()
     options = {
         "num_ctx": data.num_ctx,
-        **DEFAULT_OPTIONS,
+        **opts,
     }
     response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options)
     logger.debug(f"Responded in {timeit.default_timer() - time:.2f}s")
     logger.debug(f"Response: {response.response}")
     return response
+
+
+@lru_cache
+def hash_document(document: str, num_ctx: int) -> str:
+    """A simple hash function to hash the document and the number of context tokens, for caching purposes."""
+    return hashlib.sha256(f"{document}-{num_ctx}".encode()).hexdigest()
 
 
 def _approve_summary(data) -> bool:
@@ -74,14 +143,10 @@ def _approve_summary(data) -> bool:
     text = _prompt(data, "summary_critic").response
 
     if text.lower().strip() == "yes":
+        data._critique = ""
         return True
+    data._critique = text
     logger.error(f"Summary did not meet the criteria. Reason: {text}")
-
-
-@lru_cache
-def hash_document(document: str, num_ctx: int) -> str:
-    """A simple hash function to hash the document and the number of context tokens, for caching purposes."""
-    return hashlib.sha256(f"{document}-{num_ctx}".encode()).hexdigest()
 
 
 def _generate_summary(data, _attempts: int = 0) -> str:
@@ -109,17 +174,19 @@ def generate_summary(data) -> str:
     return summary
 
 
-def _approve_translation(data) -> bool:
+def _approve_translation(data, token) -> bool:
     """Approve the translation, or retry if it does not meet the criteria."""
     logger.debug("Reviewing translation")
-    text = _prompt(data, "translation_critic").response
+    text = _prompt(data, f"translation_critic_{token}").response
 
     if text.lower().strip() == "yes" or "no" not in text.lower().split():
+        data._critique = ""
         return True
+    data._critique = text
     logger.error(f"Translation did not meet the criteria. Reason: {text}")
 
 
-def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> str:
+def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> dict[str, str]:
     """Internal function to translate a section, with a maximum number of attempts."""
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
@@ -128,16 +195,22 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> s
         f"Translating section ({_current_section}/{len(data._sections)}). Attempt {_attempts + 1}/{data._max_attempts}"
     )
 
-    data._translated_section = _prompt(data, "translation_worker").response
+    # Extract the token and section for the prompt only
+    original_section = data._section.copy()
+    token, section = list(data._section.items())[0]
+    data._section = section
+    translated_section = _prompt(data, f"translation_worker_{token}").response
+    data._translated_section = {token: translated_section}
 
-    if not _approve_translation(data):
+    if not _approve_translation(data, token):
+        data._section = original_section
         return _translate_section(data, _attempts + 1)
 
     logger.info("Section translated successfully!")
     return data._translated_section
 
 
-def translate_sections(data) -> list[str]:
+def translate_sections(data) -> list[dict[str, str]]:
     """Translate all sections in the document, one by one"""
     data._translated_sections = []
     for i, section in enumerate(data._sections):
@@ -150,7 +223,7 @@ def translate_sections(data) -> list[str]:
 def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
-    return json.loads(text)
+    return ast.literal_eval(text)
 
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:

@@ -24,14 +24,15 @@ class TurtleTranslator:
         ""  # Markdown to prepend to the translated document (i.e. "> NOTE: This is a machine generated translation.")
     )
     _max_attempts: int = 100
-    _sections: list[str] = list
-    _section: str = ""
+    _sections: list[dict[str, str]] = list
+    _section: dict[str, str] = dict
     _translated_sections: list[str] = list
     _translated_section: str = ""
     _summary: str = ""
     _frontmatter: dict = dict
     _original_frontmatter: dict = dict
     _translated_frontmatter: dict = dict
+    _critique: str = ""  # The last critique given by the reviewer worker
 
     def __post_init__(self):
         self._original_frontmatter, self._sections = file_handler.parse(self.document, prepend_md=self.prepend_md)
@@ -49,6 +50,7 @@ class TurtleTranslator:
             "document": self.document,
             "summary": self._summary,
             "frontmatter": self.frontmatter,
+            "critique": self._critique,
         }
 
     @property
