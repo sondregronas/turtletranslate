@@ -130,15 +130,33 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[dict[str, str
     return frontmatter, sections
 
 
-def reconstruct(frontmatter: dict, sections: list[dict[str, str]]) -> str:
+def wrap_span_around_sections(sections: list[dict[str, str]]) -> list[dict[str, str]]:
+    """
+    Wrap a span tag around each section in a list of sections.
+    :param sections: The sections list.
+    :return: The sections list with the span wrapped around the text.
+    """
+    new_sections = list()
+    for i, section in enumerate(sections):
+        k, v = list(section.items())[0]
+        new_sections.append(
+            {k: f'<span data-turtletranslate-type="{k}" data-turtletranslate-index="{i}">\n\n{v}\n\n</span>'}
+        )
+    return new_sections
+
+
+def reconstruct(frontmatter: dict, sections: list[dict[str, str]], wrap_in_span: bool = True) -> str:
     """
     Reconstruct a markdown string from frontmatter and sections.
     :param frontmatter: The frontmatter dictionary.
     :param sections: The sections list.
+    :param wrap_in_span: Whether to wrap a span tag around each section, with data attributes for type and index.
     :return: The reconstructed markdown string.
     """
     frontmatter_str = yaml.dump(frontmatter, default_flow_style=False)
     if frontmatter_str.strip() == "{}":
         frontmatter_str = ""
+    if wrap_in_span:
+        sections = wrap_span_around_sections(sections)
     sections_str = "\n\n".join([list(s.values())[0] for s in sections])
     return f"---\n{frontmatter_str}---\n\n{sections_str}"

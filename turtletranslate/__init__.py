@@ -24,6 +24,7 @@ class TurtleTranslator:
         ""  # Markdown to prepend to the translated document (i.e. "> NOTE: This is a machine generated translation.")
     )
     review: bool = True  # Whether to enable the review process (critique and revision)
+    wrap_in_span: bool = True  # Whether to wrap each section in a span tag with data attributes for type and index
     _max_attempts: int = 100  # Maximum number of attempts to make before giving up on a translation
     _sections: list[dict[str, str]] = list
     _section: dict[str, str] = dict
@@ -40,7 +41,9 @@ class TurtleTranslator:
         self.frontmatter = self._original_frontmatter
 
     def reconstruct_translated_document(self) -> str:
-        return file_handler.reconstruct(self.translated_frontmatter, self._translated_sections)
+        return file_handler.reconstruct(
+            self.translated_frontmatter, self._translated_sections, wrap_in_span=self.wrap_in_span
+        )
 
     def format(self) -> dict:
         return {
