@@ -134,8 +134,8 @@ def _prompt(data, type: str, review: str = "") -> ollama.GenerateResponse:
     opts = TRANSLATE_TYPES[type][2]
     _download_model_if_not_exists(data.client, data.model)
 
-    logger.debug(f"Prompt: {prompt}")
-    logger.debug(f"System: {system}")
+    logger.debug("Prompt: " + prompt.replace("\n", "\\n").replace("\t", "\\t"))
+    logger.debug("System: " + system.replace("\n", "\\n").replace("\t", "\\t"))
 
     logger.debug("Querying Ollama")
     time = timeit.default_timer()
@@ -249,7 +249,7 @@ def translate_sections(data) -> list[dict[str, str]]:
 
 def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
-    text = text.encode("unicode_escape").decode("utf-8")
+    text = text.encode("unicode_escape").decode("utf-8").replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t")
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
     # For every line, check if it has more than 4 double quotes, if yes, replace every the 3 to -1 double quotes with a \"
     new_text = ""
@@ -302,7 +302,7 @@ def translate(data) -> str:
     logger.info(f"Translating document from {data.source_language} to {data.target_language}")
     _download_model_if_not_exists(data.client, data.model)
     time = timeit.default_timer()
-    generate_summary(data)
+    # generate_summary(data)
     translate_frontmatter(data)
     translate_sections(data)
     logger.info("Successfully translated document!")

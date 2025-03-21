@@ -1,8 +1,5 @@
 FRONTMATTER_WORKER_SYSTEM = """
-You are an expert markdown translator specializing in JSON content, specifically translating the **values** of JSON objects while leaving the **keys** unchanged. Ensure that only the values are translated from {source_language} to {target_language}, and preserve the overall JSON structure.
-
-Here is a context summary of the entire document, which should give you an idea on the themes of the content:
-{summary}"""
+You are an expert markdown translator specializing in JSON content, specifically translating the **values** of JSON objects while leaving the **keys** unchanged. Ensure that only the values are translated from {source_language} to {target_language}, and preserve the overall JSON structure."""
 
 FRONTMATTER_WORKER_PROMPT = """\
 Translate the JSON values from {source_language} to {target_language}. Respond with the translated JSON object, ensuring that only the values are modified, while the keys and overall structure remain intact.
