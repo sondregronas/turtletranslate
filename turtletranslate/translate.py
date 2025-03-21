@@ -222,7 +222,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     section_txt = f"\033[33m(Section {_current_section}/{len(data._sections)})\033[0m"
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
     type_txt = f"\033[35m(Type: {token})\033[0m"
-    logger.info(f"Translating... {section_txt} {attempt_txt} {type_txt}")
+    logger.info(f"Translating {section_txt} {attempt_txt} {type_txt}")
 
     data._section = section
     translated_section = _prompt(data, f"translation_worker_{token}").response.rstrip()
@@ -279,7 +279,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
         logger.error(f"Could not translate frontmatter after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate frontmatter after {_attempts} attempts.")
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
-    logger.info(f"Translating frontmatter. {attempt_txt}")
+    logger.info(f"Translating frontmatter {attempt_txt}")
     try:
         new_fm = extrapolate_json(_prompt(data, "frontmatter_worker").response)
         data.translated_frontmatter = new_fm
@@ -299,12 +299,11 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
 
 def translate(data) -> str:
     """The only function you need to call to translate a document, with a TurtleTranslateData object as input."""
-    logger.info(f"Translating document from {data.source_language} to {data.target_language}")
+    logger.debug(f"Translating document from {data.source_language} to {data.target_language}")
     _download_model_if_not_exists(data.client, data.model)
     time = timeit.default_timer()
     # generate_summary(data)
     translate_frontmatter(data)
     translate_sections(data)
-    logger.info("Successfully translated document!")
-    logger.debug(f"Translation took {timeit.default_timer() - time:.2f}s")
+    logger.info(f"Translation done in \033[35m{timeit.default_timer() - time:.2f}s\033[0m!")
     return data.reconstruct_translated_document()
