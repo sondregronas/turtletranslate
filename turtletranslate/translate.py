@@ -112,6 +112,7 @@ TRANSLATE_TYPES = {
 
 
 SUMMARY_CACHE = dict()  # Cache for summaries, to avoid re-generating them
+PREPEND_CACHE = dict()  # Cache for prepend data, to avoid re-generating them
 
 
 @lru_cache
@@ -127,11 +128,11 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
         logger.info(f"Downloaded {model}")
 
 
-def _prompt(data, type: str, review: str = "") -> ollama.GenerateResponse:
+def _prompt(data, token: str) -> ollama.GenerateResponse:
     """Prompt the Ollama API with the correct system and prompt for the given type (ENUM)."""
-    system = TRANSLATE_TYPES[type][0].format(**data.format())
-    prompt = TRANSLATE_TYPES[type][1].format(**data.format())
-    opts = TRANSLATE_TYPES[type][2]
+    system = TRANSLATE_TYPES[token][0].format(**data.format())
+    prompt = TRANSLATE_TYPES[token][1].format(**data.format())
+    opts = TRANSLATE_TYPES[token][2]
     _download_model_if_not_exists(data.client, data.model)
 
     logger.debug("Prompt: " + prompt.replace("\n", "\\n").replace("\t", "\\t"))
@@ -210,6 +211,17 @@ def _approve_translation(data, token) -> bool:
     logger.error(f"Translation did not meet the criteria. Reason: {text}")
 
 
+def _get_cached_prepend(data) -> dict[str, str]:
+    """Cache the prepend data to avoid re-generating it, since we will always use the same prepend."""
+    if hash_document(data.prepend_md + data.target_language, data.num_ctx) in PREPEND_CACHE:
+        logger.debug("Using cached prepend")
+        return PREPEND_CACHE[hash_document(data.prepend_md + data.target_language, data.num_ctx)]
+
+
+def _cache_prepend(data, prepend_section: dict[str, str]):
+    PREPEND_CACHE[hash_document(data.prepend_md + data.target_language, data.num_ctx)] = prepend_section
+
+
 def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> dict[str, str]:
     """Internal function to translate a section, with a maximum number of attempts."""
     if _attempts >= data._max_attempts:
@@ -224,6 +236,13 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     type_txt = f"\033[35m(Type: {token})\033[0m"
     logger.info(f"Translating {section_txt} {attempt_txt} {type_txt}")
 
+    # Get the cached prepend if it exists
+    if token == "prepend":
+        cached_prepend = _get_cached_prepend(data)
+        if cached_prepend:
+            data._translated_section = cached_prepend
+            return cached_prepend
+
     data._section = section
     translated_section = _prompt(data, f"translation_worker_{token}").response.rstrip()
     data._translated_section = translated_section
@@ -234,6 +253,9 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
 
     logger.debug("Section translated successfully!")
     data._translated_section = {token: translated_section}
+    # Cache the prepend data
+    if token == "prepend":
+        _cache_prepend(data, data._translated_section)
     return data._translated_section
 
 
@@ -251,7 +273,7 @@ def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
     text = text.encode("unicode_escape").decode("utf-8").replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t")
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
-    # For every line, check if it has more than 4 double quotes, if yes, replace every the 3 to -1 double quotes with a \"
+    # For every line, check if it has more than 4 double quotes, if yes, replace every the 3 to -1 double quotes with an escaped double quote
     new_text = ""
     for line in text.split("\n"):
         if not line.strip().startswith('"') or (not line.strip().endswith('"') and not line.strip().endswith('",')):
