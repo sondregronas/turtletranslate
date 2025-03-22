@@ -273,21 +273,32 @@ def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
     text = text.encode("unicode_escape").decode("utf-8").replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t")
     text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
-    # For every line, check if it has more than 4 double quotes, if yes, replace every the 3 to -1 double quotes with an escaped double quote
+
     new_text = ""
+
+    # If there are any symbols in the line, we need to make sure its only 4 symbols in total per line
+    # This is to avoid issues with JSON parsing
+    def check_symbol(_line: str, s: str = '"'):
+        _line = _line.strip()
+        if not _line.startswith(s) or (not _line.endswith(s) and not _line.endswith(f"{s},")):
+            return
+        if _line.count(s) == 4:
+            return
+        return s
+
     for line in text.split("\n"):
-        if not line.strip().startswith('"') or (not line.strip().endswith('"') and not line.strip().endswith('",')):
+        symbol = [check_symbol(line, s) for s in ('"', "'")]
+        if not any(symbol):
             new_text += f"{line}\n"
             continue
-        if line.count('"') == 4:
-            new_text += f"{line}\n"
-            continue
+        s = "".join([s for s in symbol if s])
+        # Replace the fourth -> second last symbol with an escaped version
         try:
-            leading, key, value, trailing = re.search(r'^(\s*)(".*?"):\s*"(.*)"(.*)', line).groups()
+            leading, key, value, trailing = re.search(r"^(\s*)(.*?" + s + "):\s*" + s + "(.*)", line).groups()
         except AttributeError:
             logger.error(f"Couldn't parse JSON from {text}")
             raise SyntaxError(f"Couldn't parse JSON from {text}")
-        value = value.replace('"', '\\"')
+        value = value.replace(s, "\\" + s)
         new_text += f'{leading}{key}: "{value}"{trailing}\n'
     return ast.literal_eval(new_text)
 
