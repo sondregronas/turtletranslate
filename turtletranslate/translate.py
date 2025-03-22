@@ -5,6 +5,7 @@ import re
 import timeit
 from functools import lru_cache
 
+import markupsafe
 import ollama
 
 from turtletranslate.exceptions import TurtleTranslateException
@@ -42,6 +43,7 @@ from turtletranslate.tokens import (
     NO_TRANSLATE_TOKEN,
     PREPEND_TOKEN,
 )
+from turtletranslate.utils import remove_backslashes
 
 TRANSLATE_TYPES = {
     # Critics
@@ -307,9 +309,8 @@ def extrapolate_json(text: str) -> dict:
         except AttributeError:
             logger.error(f"Couldn't parse JSON from {text}")
             raise SyntaxError(f"Couldn't parse JSON from {text}")
-        value = value.replace(s, "\\" + s)
         new_text += f'{leading}{key}: "{value}"{trailing}\n'
-    return ast.literal_eval(f"{{{new_text}}}")
+    return {k: remove_backslashes(str(markupsafe.escape(v))) for k, v in ast.literal_eval(f"{{{new_text}}}").items()}
 
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
