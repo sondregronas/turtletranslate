@@ -272,7 +272,7 @@ def translate_sections(data) -> list[dict[str, str]]:
 def extrapolate_json(text: str) -> dict:
     """Extract the JSON from a string with some leniency."""
     text = text.encode("unicode_escape").decode("utf-8").replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t")
-    text = "{" + text.split("{", 1)[1].rsplit("}", 1)[0] + "}"
+    text = text.split("{", 1)[1].rsplit("}", 1)[0]
 
     new_text = ""
 
@@ -294,13 +294,13 @@ def extrapolate_json(text: str) -> dict:
         s = "".join([s for s in symbol if s])
         # Replace the fourth -> second last symbol with an escaped version
         try:
-            leading, key, value, trailing = re.search(r"^(\s*)(.*?" + s + "):\s*" + s + "(.*)", line).groups()
+            leading, key, value, trailing = re.search(rf"^(\s*)({s}.*?{s}):\s*{s}(.*){s}(.*)", line).groups()
         except AttributeError:
             logger.error(f"Couldn't parse JSON from {text}")
             raise SyntaxError(f"Couldn't parse JSON from {text}")
         value = value.replace(s, "\\" + s)
         new_text += f'{leading}{key}: "{value}"{trailing}\n'
-    return ast.literal_eval(new_text)
+    return ast.literal_eval(f"{{{new_text}}}")
 
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
