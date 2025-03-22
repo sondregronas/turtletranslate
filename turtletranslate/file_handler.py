@@ -5,6 +5,7 @@ from functools import lru_cache
 import yaml
 
 from turtletranslate.logger import logger
+from turtletranslate.tokens import TOKENS, NO_TRANSLATE_TOKEN, DEFAULT_TOKEN, PREPEND_TOKEN, TOKENS_CH_LEN
 
 # The blockquote syntax captures content until there is a newline that is not followed by a blockquote symbol
 # Captures both callouts and blockquotes
@@ -19,14 +20,6 @@ DELIMITERS = "|".join(
     ]
 )
 
-TOKENS = {
-    "#": "article",  # Headers + content, up until a new delimiter
-    ">": "blockquote",  # Blockquotes in their entirety
-    "```": "codefence",  # Code fences in their entirety (not including inside blockquotes)
-}
-DEFAULT_TOKEN = "wildcard"
-PREPEND_TOKEN = "prepend"
-
 # TODO: Adding sections to a dictionary with the section type as the key, and the section as the value, would
 #       allow for separate translation handling for different section types, i.e. admonitions, code blocks, etc.
 callout_regex = re.compile(BLOCKQUOTE_SYNTAX)
@@ -35,7 +28,7 @@ delimiter_regex = re.compile(rf"(?:\n|^)({DELIMITERS})\n*", re.MULTILINE)
 
 def _prep_codefences(markdown: str) -> str:
     """We need to replace newlines in codefences with a placeholder to avoid splitting them into sections."""
-    codefences = re.findall(r"\n```.*?```", markdown, re.DOTALL)
+    codefences = re.findall(r"\n```(.*?```)", markdown, re.DOTALL)
     for codefence in codefences:
         markdown = markdown.replace(codefence, codefence.replace("\n", "\n!%CODEFENCE%!"))
     return markdown
@@ -93,6 +86,10 @@ def _tokenize_sections(sections: list[str]) -> list[dict[str, str]]:
             if section.startswith(token):
                 tokens.append({token_type: section})
                 break
+            # If no alphanumeric characters are present, we can mark it as a no_translate section
+            if not any(c.isalnum() for c in section):
+                tokens.append({NO_TRANSLATE_TOKEN: section})
+                break
         else:
             tokens.append({DEFAULT_TOKEN: section})
     return tokens
@@ -125,8 +122,7 @@ def parse(markdown: str, prepend_md: str = "") -> tuple[dict, list[dict[str, str
         for i, s in enumerate(sections):
             k, v = list(s.items())[0]
             c = v.replace("\n", "\\n").replace("\t", "\\t")
-            padding = max(len(v) for v in list(TOKENS.values()) + [DEFAULT_TOKEN])
-            logger.debug(f"\033[33mSection {i}\033[0m \033[35m{k:.<{padding}}\033[0m: \033[34m{c}\033[0m")
+            logger.debug(f"\033[33mSection {i}\033[0m \033[35m{k:.<{TOKENS_CH_LEN}}\033[0m: \033[34m{c}\033[0m")
     return frontmatter, sections
 
 
@@ -140,7 +136,12 @@ def wrap_span_around_sections(sections: list[dict[str, str]]) -> list[dict[str, 
     for i, section in enumerate(sections):
         k, v = list(section.items())[0]
         new_sections.append(
-            {k: f'<span data-turtletranslate-type="{k}" data-turtletranslate-index="{i}">\n\n{v}\n\n</span>'}
+            {
+                k: f'<span class="turtletranslate-section" '
+                f'data-turtletranslate-type="{k}" '
+                f'data-turtletranslate-index="{i}">\n\n{v}\n\n'
+                f"</span>"
+            }
         )
     return new_sections
 

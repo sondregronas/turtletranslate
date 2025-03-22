@@ -38,6 +38,10 @@ from turtletranslate.models import (
     PREPEND_TRANSLATION_CRITIC_PROMPT,
 )
 from turtletranslate.parameters import DEFAULT_OPTIONS, STRICT, LENIENT, CREATIVE  # noqa: F401
+from turtletranslate.tokens import (
+    NO_TRANSLATE_TOKEN,
+    PREPEND_TOKEN,
+)
 
 TRANSLATE_TYPES = {
     # Critics
@@ -237,11 +241,16 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     logger.info(f"Translating {section_txt} {attempt_txt} {type_txt}")
 
     # Get the cached prepend if it exists
-    if token == "prepend":
+    if token == PREPEND_TOKEN:
         cached_prepend = _get_cached_prepend(data)
         if cached_prepend:
             data._translated_section = cached_prepend
             return cached_prepend
+
+    if token == NO_TRANSLATE_TOKEN:
+        logger.debug("No translation needed for this section")
+        data._translated_section = {token: section}
+        return {token: section}
 
     data._section = section
     translated_section = _prompt(data, f"translation_worker_{token}").response.rstrip()
@@ -254,7 +263,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     logger.debug("Section translated successfully!")
     data._translated_section = {token: translated_section}
     # Cache the prepend data
-    if token == "prepend":
+    if token == PREPEND_TOKEN:
         _cache_prepend(data, data._translated_section)
     return data._translated_section
 
