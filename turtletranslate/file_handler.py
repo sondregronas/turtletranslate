@@ -13,7 +13,7 @@ BLOCKQUOTE_SYNTAX = r"[^\S\r\n]*(?:> ?)([^\n]*(?:\n[ \t>][^\n]*)*)"
 DELIMITERS = "|".join(
     [
         r"#{1,6}\s",  # Headers
-        r"`{3}(?:\n|.)+`{3}",  # Code fences
+        r"`{3}(?:\n|.)+?`{3}",  # Code fences
         BLOCKQUOTE_SYNTAX,  # Callouts and blockquotes
         # These are commented out because they can cause extra hallucinations in the translation, omitting them for now
         # r"={3}\s",  # Content blocks  # Not a problem so far, but might give inconsistent spacing
