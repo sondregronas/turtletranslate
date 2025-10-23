@@ -139,8 +139,9 @@ def wrap_span_around_sections(sections: list[dict[str, str]]) -> list[dict[str, 
             {
                 k: f'<span class="turtletranslate-section" '
                 f'data-turtletranslate-type="{k}" '
-                f'data-turtletranslate-index="{i}">\n\n{v}\n\n'
-                f"</span>"
+                f'data-turtletranslate-index="{i}" '
+                f'data-turtletranslate-checksum="{section["checksum"]}"'
+                f">\n\n{v}\n\n</span>"
             }
         )
     return new_sections

@@ -228,6 +228,11 @@ def _cache_prepend(data, prepend_section: dict[str, str]):
     PREPEND_CACHE[hash_document(data.prepend_md + data.target_language, data.num_ctx)] = prepend_section
 
 
+def generate_checksum(content: str) -> str:
+    """Generate a checksum for the given content."""
+    return hashlib.md5(content.encode()).hexdigest()[:16]  # 16-character checksum is sufficient
+
+
 def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> dict[str, str]:
     """Internal function to translate a section, with a maximum number of attempts."""
     if _attempts >= data._max_attempts:
@@ -236,6 +241,9 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     # Extract the token and section for the prompt only
     original_section = data._section.copy()
     token, section = list(data._section.items())[0]
+
+    # Generate checksum from original content
+    checksum = generate_checksum(section)
 
     section_txt = f"\033[33m(Section {_current_section}/{len(data._sections)})\033[0m"
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
@@ -247,12 +255,13 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
         cached_prepend = _get_cached_prepend(data)
         if cached_prepend:
             data._translated_section = cached_prepend
-            return cached_prepend
+            data._translated_section["checksum"] = checksum
+            return data._translated_section
 
     if token == NO_TRANSLATE_TOKEN:
         logger.debug("No translation needed for this section")
-        data._translated_section = {token: section}
-        return {token: section}
+        data._translated_section = {token: section, "checksum": checksum}
+        return {token: section, "checksum": checksum}
 
     data._section = section
     translated_section = _prompt(data, f"translation_worker_{token}").response.rstrip()
@@ -263,7 +272,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
         return _translate_section(data, _attempts + 1, _current_section=_current_section)
 
     logger.debug("Section translated successfully!")
-    data._translated_section = {token: translated_section}
+    data._translated_section = {token: translated_section, "checksum": checksum}
     # Cache the prepend data
     if token == PREPEND_TOKEN:
         _cache_prepend(data, data._translated_section)
