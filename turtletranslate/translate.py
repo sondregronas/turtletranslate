@@ -238,6 +238,7 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     if _attempts >= data._max_attempts:
         logger.error(f"Could not translate section after {_attempts} attempts.")
         raise TurtleTranslateException(f"Could not translate section after {_attempts} attempts.")
+
     # Extract the token and section for the prompt only
     original_section = data._section.copy()
     token, section = list(data._section.items())[0]
@@ -248,6 +249,14 @@ def _translate_section(data, _attempts: int = 0, _current_section: int = 1) -> d
     section_txt = f"\033[33m(Section {_current_section}/{len(data._sections)})\033[0m"
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
     type_txt = f"\033[35m(Type: {token})\033[0m"
+
+    # Check if we have an existing translation with the same checksum
+    if data._existing_sections and checksum in data._existing_sections:
+        logger.info(f"Reusing existing translation for {section_txt} {type_txt} (checksum: {checksum})")
+        existing_content = data._existing_sections[checksum]
+        data._translated_section = {token: existing_content, "checksum": checksum}
+        return data._translated_section
+
     logger.info(f"Translating {section_txt} {attempt_txt} {type_txt}")
 
     # Get the cached prepend if it exists
@@ -354,8 +363,23 @@ def translate(data) -> str:
     logger.debug(f"Translating document from {data.source_language} to {data.target_language}")
     _download_model_if_not_exists(data.client, data.model)
     time = timeit.default_timer()
+    # TODO: Use a "context summary" to improve contextual translations
     # generate_summary(data)
     translate_frontmatter(data)
     translate_sections(data)
-    logger.info(f"Translation done in \033[35m{timeit.default_timer() - time:.2f}s\033[0m!")
-    return data.reconstruct_translated_document()
+    finish_time = timeit.default_timer() - time
+
+    stats = dict()
+    if data.add_stats:
+        stats = {
+            "turtletranslate_time": f"{finish_time:.2f}s",
+            "turtletranslate_model": data.model,
+            "turtletranslate_source_language": data.source_language,
+            "turtletranslate_target_language": data.target_language,
+        }
+
+    logger.info(f"Translation done in \033[35m{finish_time:.2f}s\033[0m!")
+
+    if data.write_file and data.target_filename:
+        return data.write_translated_document(extra_frontmatter=stats)
+    return data.reconstruct_translated_document(extra_frontmatter=stats)

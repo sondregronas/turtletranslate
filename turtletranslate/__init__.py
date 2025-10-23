@@ -1,8 +1,11 @@
+import os
+import re
 from dataclasses import dataclass
 
 import ollama
 
 from turtletranslate import file_handler
+from turtletranslate.logger import logger
 from turtletranslate.translate import translate
 
 TRANSLATABLE_FRONTMATTER_KEYS = [
@@ -25,6 +28,9 @@ class TurtleTranslator:
     )
     review: bool = True  # Whether to enable the review process (critique and revision)
     wrap_in_span: bool = True  # Whether to wrap each section in a span tag with data attributes for type and index
+    target_filename: str = None  # Target filename for translation output and reuse
+    write_file: bool = None  # Whether to write the output to a file (defaults to True if target_filename is provided)
+    add_stats: bool = True  # Whether to add translation statistics to the frontmatter
     _max_attempts: int = 100  # Maximum number of attempts to make before giving up on a translation
     _sections: list[dict[str, str]] = list
     _section: dict[str, str] = dict
@@ -35,14 +41,39 @@ class TurtleTranslator:
     _original_frontmatter: dict = dict
     _translated_frontmatter: dict = dict
     _critique: str = ""  # The last critique given by the reviewer worker
+    _existing_sections: dict = None  # Dictionary to store existing translated sections by checksum
 
     def __post_init__(self):
         self._original_frontmatter, self._sections = file_handler.parse(self.document, prepend_md=self.prepend_md)
         self.frontmatter = self._original_frontmatter
 
-    def reconstruct_translated_document(self) -> str:
+    def _load_existing_translations(self):
+        """Load existing translations from target file and map them by checksum."""
+        try:
+            with open(self.target_filename, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Find all spans with checksums
+            pattern = (
+                r'<span class="turtletranslate-section"[^>]*?data-turtletranslate-checksum="([^"]+)"[^>]*?>(.*?)</span>'
+            )
+            matches = re.findall(pattern, content, re.DOTALL)
+
+            # Store sections by checksum
+            for checksum, section_content in matches:
+                section_content = section_content.strip()
+                self._existing_sections[checksum] = section_content
+
+            logger.info(f"Loaded {len(self._existing_sections)} existing translations from {self.target_filename}")
+        except Exception as e:
+            logger.warning(f"Failed to load existing translations: {e}")
+
+    def reconstruct_translated_document(self, extra_frontmatter: dict = None) -> str:
+        extra_frontmatter = extra_frontmatter or dict()
         return file_handler.reconstruct(
-            self.translated_frontmatter, self._translated_sections, wrap_in_span=self.wrap_in_span
+            {**self.translated_frontmatter, **extra_frontmatter},
+            self._translated_sections,
+            wrap_in_span=self.wrap_in_span,
         )
 
     def format(self) -> dict:
@@ -74,4 +105,28 @@ class TurtleTranslator:
         self._translated_frontmatter = value
 
     def translate(self):
+        # Set write_file default if not explicitly set
+        if self.write_file is None:
+            self.write_file = self.target_filename is not None
+
+        # Load existing translations if target file exists
+        self._existing_sections = dict()
+        if self.target_filename and os.path.exists(self.target_filename):
+            self._load_existing_translations()
+
         return translate(self)
+
+    def write_translated_document(self, extra_frontmatter: dict = None) -> str:
+        """Write the translated document to the target file if write_file is True."""
+        translated_content = self.reconstruct_translated_document(extra_frontmatter=extra_frontmatter)
+
+        if self.write_file and self.target_filename:
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(self.target_filename)), exist_ok=True)
+                with open(self.target_filename, "w", encoding="utf-8") as f:
+                    f.write(translated_content)
+                logger.info(f"Translated document written to {self.target_filename}")
+            except Exception as e:
+                logger.error(f"Failed to write translated document: {e}")
+
+        return translated_content

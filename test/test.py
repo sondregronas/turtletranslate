@@ -20,6 +20,7 @@ languages = [
     "Spanish",
 ]
 models = [
+    # "gemma3:1b-it-q8_0",
     "gemma3:27b-it-q4_K_M",
     # "llama3.1",
     # "llama3.2",
@@ -52,22 +53,15 @@ def translate(model, file, context_size):
         target_language="English",
         prepend_md=prepend_md,
         num_ctx=context_size,
+        review=False,
     )
-
+    fn = file.stem
     os.makedirs(Path(__file__).parent / "translated", exist_ok=True)
     for language in languages:
         data.target_language = language
-        start = timeit.default_timer()
-        translated_document = data.translate()
-        end = timeit.default_timer()
-        translated_document = translated_document.replace("---", f"---\ntime_to_translate: {end - start:.2f}s", 1)
-        filename = file.stem
-        with open(
-            Path(__file__).parent / "translated" / f"{filename}_{model.replace(':','-')}_{language}_{context_size}.md",
-            "w+",
-            encoding="utf-8",
-        ) as f:
-            f.write(translated_document)
+        new_fn = Path(__file__).parent / "translated" / f"{fn}_{model.replace(':','-')}_{language}_{context_size}.md"
+        data.target_filename = str(new_fn)
+        data.translate()
 
     logger.info("Translation complete!")
     logger.info(f"Summary generated: {data._summary}")
