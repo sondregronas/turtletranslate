@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 
 import ollama
+from bs4 import BeautifulSoup
 
 from turtletranslate import file_handler
 from turtletranslate.file_handler import parse
@@ -54,16 +55,19 @@ class TurtleTranslator:
             with open(self.target_filename, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Find all spans with checksums
-            pattern = (
-                r'<span class="turtletranslate-section"[^>]*?data-turtletranslate-checksum="([^"]+)"[^>]*?>(.*?)</span>'
-            )
-            matches = re.findall(pattern, content, re.DOTALL)
+            # Parse HTML with BeautifulSoup
+            soup = BeautifulSoup(content, "html.parser")
+
+            # Find all span elements with turtletranslate-section class
+            spans = soup.find_all("span", class_="turtletranslate-section")
 
             # Store sections by checksum
-            for checksum, section_content in matches:
-                section_content = section_content.strip()
-                self._existing_sections[checksum] = section_content
+            for span in spans:
+                checksum = span.get("data-turtletranslate-checksum")
+                if checksum:
+                    # Extract the content directly from the span
+                    section_content = span.decode_contents(formatter=None).strip()
+                    self._existing_sections[checksum] = section_content.strip()
 
             logger.info(f"Loaded {len(self._existing_sections)} existing translations from {self.target_filename}")
         except Exception as e:
