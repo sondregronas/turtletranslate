@@ -5,8 +5,9 @@ from dataclasses import dataclass
 import ollama
 
 from turtletranslate import file_handler
+from turtletranslate.file_handler import parse
 from turtletranslate.logger import logger
-from turtletranslate.translate import translate
+from turtletranslate.translate import translate, generate_checksum
 
 TRANSLATABLE_FRONTMATTER_KEYS = [
     "title",
@@ -130,3 +131,68 @@ class TurtleTranslator:
                 logger.error(f"Failed to write translated document: {e}")
 
         return translated_content
+
+
+def _retroactively_update_checksums(source_document: str, target_document: str, output_file: str = None) -> str:
+    """
+    Update existing translated document with checksums from source document.
+
+    Args:
+        source_document: Path to the original source document
+        target_document: Path to the translated document that needs checksums
+        output_file: Path to write updated document (defaults to target_document)
+
+    Returns:
+        Updated document content with checksums
+    """
+    # Read source and target documents
+    with open(source_document, "r", encoding="utf-8") as f:
+        source_content = f.read()
+    with open(target_document, "r", encoding="utf-8") as f:
+        target_content = f.read()
+
+    # Parse source document to generate checksums
+    source_frontmatter, source_sections = parse(source_content)
+
+    # Find opening span tags in target document (without checksum attribute)
+    pattern = r'(<span class="turtletranslate-section"[^>]*?data-turtletranslate-type="([^"]+)"[^>]*?data-turtletranslate-index="(\d+)"[^>]*?)>'
+
+    # For each match, calculate and insert the checksum attribute
+    def replace_match(match):
+        opening_tag = match.group(1)
+        section_type = match.group(2)
+        index = int(match.group(3)) - 1
+
+        # Skip prepend section as it's not in the original document
+        if section_type == "prepend":
+            return match.group(0)
+
+        # Only add checksum if it's not already present
+        if "data-turtletranslate-checksum" not in opening_tag:
+            # Find corresponding source section by index and type
+            try:
+                print(index, section_type, source_sections[index], source_sections)
+                if index < len(source_sections) and section_type in source_sections[index]:
+                    original_content = source_sections[index][section_type]
+                    checksum = generate_checksum(original_content)
+                    # Insert checksum attribute before closing bracket
+                    return f'{opening_tag} data-turtletranslate-checksum="{checksum}">'
+            except (IndexError, KeyError):
+                logger.warning(f"Could not find matching source section for {section_type} at index {index}")
+
+        # If no matching section or already has checksum, return unchanged
+        return match.group(0)
+
+    # Apply replacements
+    updated_content = re.sub(pattern, replace_match, target_content)
+
+    # Write to output file if specified
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(updated_content)
+    elif output_file is None and target_document:  # Default to overwriting target
+        with open(target_document, "w+", encoding="utf-8") as f:
+            f.write(updated_content)
+
+    logger.info(f"Added checksums to translated document from {source_document}")
+    return updated_content
