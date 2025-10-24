@@ -145,7 +145,7 @@ class TurtleTranslator:
 
                 translations[checksum] = (original_content, translated_content, section_type)
 
-            logger.info(f"Extracted {len(translations)} translations from {self.target_filename}")
+            logger.debug(f"Extracted {len(translations)} translations from {self.target_filename}")
         except Exception as e:
             logger.error(f"Failed to extract translations: {e}")
 
