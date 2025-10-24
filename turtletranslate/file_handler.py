@@ -3,10 +3,10 @@ import re
 from functools import lru_cache
 
 import yaml
-from bs4 import BeautifulSoup
 
 from turtletranslate.logger import logger
 from turtletranslate.tokens import TOKENS, NO_TRANSLATE_TOKEN, DEFAULT_TOKEN, PREPEND_TOKEN, TOKENS_CH_LEN
+from typing import Dict
 
 # The blockquote syntax captures content until there is a newline that is not followed by a blockquote symbol
 # Captures both callouts and blockquotes
@@ -20,6 +20,7 @@ DELIMITERS = "|".join(
         # r"={3}\s",  # Content blocks  # Not a problem so far, but might give inconsistent spacing
     ]
 )
+
 
 # TODO: Adding sections to a dictionary with the section type as the key, and the section as the value, would
 #       allow for separate translation handling for different section types, i.e. admonitions, code blocks, etc.
@@ -165,31 +166,49 @@ def reconstruct(frontmatter: dict, sections: list[dict[str, str]], wrap_in_span:
     return f"---\n{frontmatter_str}---\n\n{sections_str}"
 
 
-def load_translations_from_file(file_path: str) -> dict:
-    """
-    Load translations from a file and return a dictionary of sections by checksum.
+# Find any <span ...> that (a) has class including turtletranslate-section and
+# (b) has data-turtletranslate-checksum, regardless of attribute order.
+START_RE = re.compile(
+    r"<span"
+    r'(?=[^>]*\bclass="[^"]*\bturtletranslate-section\b")'
+    r'(?=[^>]*\bdata-turtletranslate-checksum="([^"]+)")'
+    r"[^>]*>",
+    re.IGNORECASE,
+)
 
-    Args:
-        file_path (str): Path to the file to load translations from.
+# Closing </span> tag (case-insensitive).
+CLOSE_RE = re.compile(r"</\s*span\s*>", re.IGNORECASE)
 
-    Returns:
-        dict: A dictionary where the key is the checksum, and the value is the section content.
+
+def load_translations_from_file(file_path: str) -> Dict[str, str]:
     """
-    translations = dict()
+    Extract sections by finding each wrapper start, then capturing content
+    up to the next wrapper start (or EOF), truncated at the last </span>
+    within that window. Preserves inner content verbatim.
+    """
+    translations: Dict[str, str] = {}
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Parse the file using BeautifulSoup
-        soup = BeautifulSoup(content, "html.parser")
-        spans = soup.find_all("span", class_="turtletranslate-section")
+        starts = list(START_RE.finditer(content))
+        for i, m in enumerate(starts):
+            checksum = m.group(1)
+            section_start = m.end()
+            boundary = starts[i + 1].start() if i + 1 < len(starts) else len(content)
+            window = content[section_start:boundary]
 
-        # Extract translations by checksum
-        for span in spans:
-            checksum = span.get("data-turtletranslate-checksum")
-            if checksum:
-                section_content = span.decode_contents(formatter=None).strip()
-                translations[checksum] = section_content
+            # Find the last </span> before the boundary, if any.
+            last_close = None
+            for close in CLOSE_RE.finditer(window):
+                last_close = close
+            if last_close is not None:
+                section_content = window[: last_close.start()]
+            else:
+                # No closing tag before next wrapper/EOF; take everything.
+                section_content = window
+
+            translations[checksum] = section_content.strip()
 
     except Exception as e:
         logger.warning(f"Failed to load translations from {file_path}: {e}")
