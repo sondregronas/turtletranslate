@@ -156,23 +156,50 @@ class TurtleTranslator:
 
         return translations
 
-    def validate_translations(self) -> dict[str, list]:
+    def remove_failed_translation_checksums(self, failed_checksums: list[str]) -> None:
+        """
+        Remove checksum attributes from failed translations in the target file.
+
+        Args:
+            failed_checksums: List of checksums to remove from the target file
+        """
+        if not failed_checksums:
+            return
+
+        try:
+            with open(self.target_filename, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            for checksum in failed_checksums:
+                pattern = rf'\sdata-turtletranslate-checksum="{checksum}"'
+                content = re.sub(pattern, "", content)
+
+            with open(self.target_filename, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            logger.info(f"Removed {len(failed_checksums)} failed checksums from {self.target_filename}")
+        except Exception as e:
+            logger.error(f"Failed to remove checksums: {e}")
+
+    def validate_translations(self, invalidate_checksums=True) -> dict[str, list]:
         """Iterate through all translation pairs, run validation, and return a summary of results."""
-
-        raise NotImplementedError("Translation validation is not yet implemented.")
-
-        # TODO: Add options to customize validation behavior (e.g., retry translation, invalidate checksum (for next translation run), etc.)
-
         results = {
             "passed": [],
             "failed": [],
         }
         for checksum, tuples in self.get_translation_tuples().items():
             org, translated, section_type = tuples
-            if validate(org, translated, section_type):
+            if validate(self, org, translated, section_type):
                 results["passed"].append(checksum)
             else:
                 results["failed"].append(checksum)
+
+        if invalidate_checksums and results["failed"]:
+            self.remove_failed_translation_checksums(results["failed"])
+
+        # TODO: more validation behavior (e.g., re-translation attempts) can be added here
+        # Ideally we should use protocols or strategies to manage different validation failure behaviors, but for now this spaghetti code will do.
+
         return results
 
     def write_translated_document(self, extra_frontmatter: dict = None) -> str:
