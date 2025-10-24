@@ -3,6 +3,7 @@ import re
 from functools import lru_cache
 
 import yaml
+from bs4 import BeautifulSoup
 
 from turtletranslate.logger import logger
 from turtletranslate.tokens import TOKENS, NO_TRANSLATE_TOKEN, DEFAULT_TOKEN, PREPEND_TOKEN, TOKENS_CH_LEN
@@ -162,3 +163,35 @@ def reconstruct(frontmatter: dict, sections: list[dict[str, str]], wrap_in_span:
         sections = wrap_span_around_sections(sections)
     sections_str = "\n\n".join([list(s.values())[0] for s in sections])
     return f"---\n{frontmatter_str}---\n\n{sections_str}"
+
+
+def load_translations_from_file(file_path: str) -> dict:
+    """
+    Load translations from a file and return a dictionary of sections by checksum.
+
+    Args:
+        file_path (str): Path to the file to load translations from.
+
+    Returns:
+        dict: A dictionary where the key is the checksum, and the value is the section content.
+    """
+    translations = dict()
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Parse the file using BeautifulSoup
+        soup = BeautifulSoup(content, "html.parser")
+        spans = soup.find_all("span", class_="turtletranslate-section")
+
+        # Extract translations by checksum
+        for span in spans:
+            checksum = span.get("data-turtletranslate-checksum")
+            if checksum:
+                section_content = span.decode_contents(formatter=None).strip()
+                translations[checksum] = section_content
+
+    except Exception as e:
+        logger.warning(f"Failed to load translations from {file_path}: {e}")
+
+    return translations

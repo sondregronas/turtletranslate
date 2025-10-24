@@ -3,12 +3,13 @@ import re
 from dataclasses import dataclass
 
 import ollama
-from bs4 import BeautifulSoup
 
 from turtletranslate import file_handler
-from turtletranslate.file_handler import parse
+from turtletranslate.file_handler import parse, load_translations_from_file
 from turtletranslate.logger import logger
+from turtletranslate.tokens import NO_TRANSLATE_TOKEN
 from turtletranslate.translate import translate, generate_checksum
+from turtletranslate.validator import validate
 
 TRANSLATABLE_FRONTMATTER_KEYS = [
     "title",
@@ -51,27 +52,11 @@ class TurtleTranslator:
 
     def _load_existing_translations(self):
         """Load existing translations from target file and map them by checksum."""
-        try:
-            with open(self.target_filename, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            # Parse HTML with BeautifulSoup
-            soup = BeautifulSoup(content, "html.parser")
-
-            # Find all span elements with turtletranslate-section class
-            spans = soup.find_all("span", class_="turtletranslate-section")
-
-            # Store sections by checksum
-            for span in spans:
-                checksum = span.get("data-turtletranslate-checksum")
-                if checksum:
-                    # Extract the content directly from the span
-                    section_content = span.decode_contents(formatter=None).strip()
-                    self._existing_sections[checksum] = section_content.strip()
-
+        if self.target_filename and os.path.exists(self.target_filename):
+            self._existing_sections = load_translations_from_file(self.target_filename)
             logger.info(f"Loaded {len(self._existing_sections)} existing translations from {self.target_filename}")
-        except Exception as e:
-            logger.warning(f"Failed to load existing translations: {e}")
+        else:
+            logger.warning("Target file does not exist or is not specified.")
 
     def reconstruct_translated_document(self, extra_frontmatter: dict = None) -> str:
         extra_frontmatter = extra_frontmatter or dict()
@@ -120,6 +105,75 @@ class TurtleTranslator:
             self._load_existing_translations()
 
         return translate(self)
+
+    def get_translation_tuples(self) -> dict:
+        """
+        Extract translations from the target file and return a dictionary of translations.
+
+        Requires target_filename to be set and the file to exist.
+
+        Returns:
+            dict: A dictionary where the key is the checksum, and the value is a tuple of
+                  (original_section_content, translated_section_content, section_type).
+        """
+        translations = dict()
+        if not self.target_filename or not os.path.exists(self.target_filename):
+            logger.warning("Target file does not exist or is not specified.")
+            return translations
+
+        try:
+            # Parse the original document to get sections and their checksums
+            _, source_sections = parse(self.document)
+
+            # Load translations from the target file
+            loaded_translations = load_translations_from_file(self.target_filename)
+
+            # Map translations by checksum
+            for checksum, translated_content in loaded_translations.items():
+                section_type = None  # Default to None if not found
+                original_content = ""
+
+                # Find the original content and section type using the checksum
+                for section in source_sections:
+                    for key, value in section.items():
+                        if generate_checksum(value) == checksum:
+                            original_content = value
+                            section_type = key
+                            break
+                    if original_content:
+                        break
+
+                translations[checksum] = (original_content, translated_content, section_type)
+
+            logger.info(f"Extracted {len(translations)} translations from {self.target_filename}")
+        except Exception as e:
+            logger.error(f"Failed to extract translations: {e}")
+
+        # Filter out sections of type None and NO_TRANSLATE_TOKEN
+        translations = {
+            checksum: value for checksum, value in translations.items() if value[2] not in (None, NO_TRANSLATE_TOKEN)
+        }
+
+        return translations
+
+    def validate_translations(self) -> dict[str, list]:
+        """Iterate through all translation pairs, run validation, and return a summary of results."""
+
+        raise NotImplementedError("Translation validation is not yet implemented.")
+
+        # TODO: Add options to customize validation behavior (e.g., retry translation, invalidate checksum (for next translation run), etc.)
+
+        results = {
+            "passed": [],
+            "failed": [],
+        }
+        for checksum, tuples in self.get_translation_tuples().items():
+            org, translated, section_type = tuples
+            if validate(org, translated, section_type):
+                results["passed"].append(checksum)
+            else:
+                results["failed"].append(checksum)
+        return results
 
     def write_translated_document(self, extra_frontmatter: dict = None) -> str:
         """Write the translated document to the target file if write_file is True."""
