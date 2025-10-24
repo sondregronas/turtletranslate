@@ -1,4 +1,3 @@
-import ast
 import hashlib
 import json
 import timeit
@@ -42,7 +41,7 @@ from turtletranslate.tokens import (
     NO_TRANSLATE_TOKEN,
     PREPEND_TOKEN,
 )
-from turtletranslate.utils import remove_backslashes
+from turtletranslate.utils import remove_backslashes, _parse_json_flexibly
 
 TRANSLATE_TYPES = {
     # Critics
@@ -298,57 +297,31 @@ def translate_sections(data) -> list[dict[str, str]]:
 
 
 def extrapolate_json(text: str) -> dict:
-    """Extract a JSON-like object from an LLM response robustly."""
-    # Extract substring between the first '{' and the last '}'.
-    if "{" not in text or "}" not in text:
+    """
+    Extract a JSON-like object from a language model response robustly,
+    handling malformed quoting, unescaped apostrophes, and other minor issues.
+    """
+
+    # --- Step 1: Isolate JSON-like substring ---
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1:
         raise SyntaxError("Couldn't find JSON object in response")
-    s = text[text.find("{") : text.rfind("}") + 1]
+    s = text[start : end + 1]
 
-    # Normalize whitespace and quotes commonly produced by LLMs.
-    s = s.replace("\r", " ").replace("\n", " ").replace("\t", " ")
-    s = s.replace("“", '"').replace("”", '"').replace("’", "'")
+    # --- Step 2: Normalize whitespace and quote variants ---
+    s = s.replace("\r", " ").replace("\n", " ").replace("\t", " ").replace("“", '"').replace("”", '"').replace("’", "'")
 
-    # 1) Try strict JSON
+    # --- Step 3: Attempt strict JSON parsing first ---
     try:
         obj = json.loads(s)
     except json.JSONDecodeError:
-        # 2) Try Python literal (handles single quotes)
-        try:
-            obj = ast.literal_eval(s)
-        except Exception:
-            # 3) Normalize single-line dicts by splitting top-level commas, then retry
-            inner = s[1:-1]
-            out = []
-            in_str = False
-            quote = ""
-            depth = 0
-            for ch in inner:
-                if ch in ("'", '"'):
-                    if in_str and ch == quote:
-                        in_str = False
-                        quote = ""
-                    elif not in_str:
-                        in_str = True
-                        quote = ch
-                elif not in_str:
-                    if ch == "{":
-                        depth += 1
-                    elif ch == "}":
-                        depth -= 1
-                    elif ch == "," and depth == 0:
-                        out.append(",\n")
-                        continue
-                out.append(ch)
-            s2 = "{" + "".join(out) + "}"
-            try:
-                obj = ast.literal_eval(s2)
-            except Exception as e2:
-                raise SyntaxError(f"Couldn't parse JSON from response: {text}") from e2
+        obj = _parse_json_flexibly(s)
 
+    # --- Step 4: Validate result ---
     if not isinstance(obj, dict):
         raise SyntaxError("Expected a JSON object")
 
-    # Return stringified keys/values, escaping values like before
+    # --- Step 5: Sanitize and stringify keys/values ---
     return {str(k): remove_backslashes(str(markupsafe.escape(v))) for k, v in obj.items()}
 
 
