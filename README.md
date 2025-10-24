@@ -2,6 +2,9 @@
 
 A slow and steady way to translate markdown documents using Ollama
 
+> [!NOTE]
+> This project is a work in progress - a lot of refactoring and improvements are needed.
+
 ## Installation
 
 ```bash

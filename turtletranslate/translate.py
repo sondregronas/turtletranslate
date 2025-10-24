@@ -1,7 +1,6 @@
 import ast
 import hashlib
 import json
-import re
 import timeit
 from functools import lru_cache
 
@@ -299,36 +298,58 @@ def translate_sections(data) -> list[dict[str, str]]:
 
 
 def extrapolate_json(text: str) -> dict:
-    """Extract the JSON from a string with some leniency."""
-    text = text.encode("unicode_escape").decode("utf-8").replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t")
-    text = text.split("{", 1)[1].rsplit("}", 1)[0]
+    """Extract a JSON-like object from an LLM response robustly."""
+    # Extract substring between the first '{' and the last '}'.
+    if "{" not in text or "}" not in text:
+        raise SyntaxError("Couldn't find JSON object in response")
+    s = text[text.find("{") : text.rfind("}") + 1]
 
-    new_text = ""
+    # Normalize whitespace and quotes commonly produced by LLMs.
+    s = s.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+    s = s.replace("“", '"').replace("”", '"').replace("’", "'")
 
-    # If there are any symbols in the line, we need to make sure its only 4 symbols in total per line
-    # This is to avoid issues with JSON parsing
-    def check_symbol(_line: str, s: str = '"'):
-        _line = _line.strip()
-        if not _line.startswith(s) or (not _line.endswith(s) and not _line.endswith(f"{s},")):
-            return
-        if _line.count(s) == 4:
-            return
-        return s
-
-    for line in text.split("\n"):
-        symbol = [check_symbol(line, s) for s in ('"', "'")]
-        if not any(symbol):
-            new_text += f"{line}\n"
-            continue
-        s = "".join([s for s in symbol if s])
-        # Replace the fourth -> second last symbol with an escaped version
+    # 1) Try strict JSON
+    try:
+        obj = json.loads(s)
+    except json.JSONDecodeError:
+        # 2) Try Python literal (handles single quotes)
         try:
-            leading, key, value, trailing = re.search(rf"^(\s*)({s}.*?{s}):\s*{s}(.*){s}(.*)", line).groups()
-        except AttributeError:
-            logger.error(f"Couldn't parse JSON from {text}")
-            raise SyntaxError(f"Couldn't parse JSON from {text}")
-        new_text += f'{leading}{key}: "{value}"{trailing}\n'
-    return {k: remove_backslashes(str(markupsafe.escape(v))) for k, v in ast.literal_eval(f"{{{new_text}}}").items()}
+            obj = ast.literal_eval(s)
+        except Exception:
+            # 3) Normalize single-line dicts by splitting top-level commas, then retry
+            inner = s[1:-1]
+            out = []
+            in_str = False
+            quote = ""
+            depth = 0
+            for ch in inner:
+                if ch in ("'", '"'):
+                    if in_str and ch == quote:
+                        in_str = False
+                        quote = ""
+                    elif not in_str:
+                        in_str = True
+                        quote = ch
+                elif not in_str:
+                    if ch == "{":
+                        depth += 1
+                    elif ch == "}":
+                        depth -= 1
+                    elif ch == "," and depth == 0:
+                        out.append(",\n")
+                        continue
+                out.append(ch)
+            s2 = "{" + "".join(out) + "}"
+            try:
+                obj = ast.literal_eval(s2)
+            except Exception as e2:
+                raise SyntaxError(f"Couldn't parse JSON from response: {text}") from e2
+
+    if not isinstance(obj, dict):
+        raise SyntaxError("Expected a JSON object")
+
+    # Return stringified keys/values, escaping values like before
+    return {str(k): remove_backslashes(str(markupsafe.escape(v))) for k, v in obj.items()}
 
 
 def translate_frontmatter(data, _attempts: int = 0) -> dict:
