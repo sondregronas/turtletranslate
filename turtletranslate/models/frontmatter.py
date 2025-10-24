@@ -10,6 +10,7 @@ Translate the JSON values from {source_language} to {target_language}. Respond w
 3. Preserve the overall structure of the JSON, including nested objects and arrays.
 4. Ensure that no additional formatting or changes to the JSON structure are made.
 5. Ensure values always end with a quote and a comma, same as how the original JSON is formatted.
+6. Special characters in the values should be escaped using unicode or html entities.
 
 **Original JSON:**
 {frontmatter}
