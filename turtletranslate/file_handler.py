@@ -1,6 +1,7 @@
 import logging
 import re
 from functools import lru_cache
+from bisect import bisect
 
 import yaml
 
@@ -176,26 +177,40 @@ START_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Regex to find ANY turtletranslate-section span (with or without checksum) for boundary detection.
+ANY_START_RE = re.compile(
+    r"<span" r'(?=[^>]*\bclass="[^"]*\bturtletranslate-section\b")' r"[^>]*>",
+    re.IGNORECASE,
+)
+
 # Closing </span> tag (case-insensitive).
 CLOSE_RE = re.compile(r"</\s*span\s*>", re.IGNORECASE)
 
 
 def load_translations_from_file(file_path: str) -> Dict[str, str]:
     """
-    Extract sections by finding each wrapper start, then capturing content
-    up to the next wrapper start (or EOF), truncated at the last </span>
-    within that window. Preserves inner content verbatim.
+    Extract sections by finding each wrapper start that has a checksum, then capturing content
+    up to the next turtletranslate-section wrapper start (with or without checksum) or EOF,
+    truncated at the last </span> within that window. Preserves inner content verbatim.
     """
     translations: Dict[str, str] = {}
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        starts = list(START_RE.finditer(content))
-        for i, m in enumerate(starts):
+        starts = list(START_RE.finditer(content))  # only spans with checksum
+        if not starts:
+            return translations
+
+        boundaries = list(ANY_START_RE.finditer(content))  # all turtletranslate-section spans
+        boundary_positions = [m.start() for m in boundaries]
+
+        for m in starts:
             checksum = m.group(1)
             section_start = m.end()
-            boundary = starts[i + 1].start() if i + 1 < len(starts) else len(content)
+            # Next boundary is the next turtletranslate-section span start (any), otherwise EOF
+            next_idx = bisect(boundary_positions, m.start())
+            boundary = boundary_positions[next_idx] if next_idx < len(boundary_positions) else len(content)
             window = content[section_start:boundary]
 
             # Find the last </span> before the boundary, if any.
