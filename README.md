@@ -35,7 +35,6 @@ turtle = TurtleTranslator(
 translated_document = turtle.translate()
 
 print(f"Document saved to: {turtle.target_filename}")
-print(translated_document)
 ```
 
 ## Options

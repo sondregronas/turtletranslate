@@ -104,6 +104,15 @@ class TurtleTranslator:
         if self.target_filename and os.path.exists(self.target_filename):
             self._load_existing_translations()
 
+            # Check if all sections are already translated, skip translation if so
+            translation_checksums = list(self._existing_sections.keys())
+            section_checksums = [generate_checksum(list(s.values())[0]) for s in self._sections if list(s.keys())[0]]
+            checksums_match = all([cs in translation_checksums for cs in section_checksums])
+
+            if translation_checksums and checksums_match:
+                logger.info("All sections already translated, skipping translation. (All checksums match.)")
+                return
+
         return translate(self)
 
     def get_translation_tuples(self) -> dict:
