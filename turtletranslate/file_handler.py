@@ -101,7 +101,7 @@ def _tokenize_sections(sections: list[str]) -> list[dict[str, str]]:
 def _get_sections(markdown: str) -> list[dict[str, str]]:
     """Get the sections from a markdown string as a list."""
     if markdown.startswith("---\n"):
-        markdown = "".join(markdown.split("---\n")[2:])
+        markdown = markdown.split("---\n", 2)[2]
     markdown = _prep_codefences(markdown)
     sections = delimiter_regex.split(markdown)
     sections = _cleanup_sections(sections)  # Merge headers with the following section
