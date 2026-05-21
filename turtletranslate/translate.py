@@ -36,7 +36,7 @@ from turtletranslate.models import (
     PREPEND_TRANSLATION_CRITIC_SYSTEM,
     PREPEND_TRANSLATION_CRITIC_PROMPT,
 )
-from turtletranslate.parameters import DEFAULT_OPTIONS, STRICT, LENIENT, CREATIVE  # noqa: F401
+from turtletranslate.parameters import STRICT, LENIENT, CREATIVE, CODING
 from turtletranslate.tokens import (
     NO_TRANSLATE_TOKEN,
     PREPEND_TOKEN,
@@ -53,7 +53,7 @@ TRANSLATE_TYPES = {
     "translation_critic_codefence": (
         TRANSLATION_CRITIC_CODEFENCE_SYSTEM,
         TRANSLATION_CRITIC_CODEFENCE_PROMPT,
-        LENIENT,
+        CODING,
     ),
     "translation_critic_article": (
         TRANSLATION_CRITIC_ARTICLE_SYSTEM,
@@ -90,7 +90,7 @@ TRANSLATE_TYPES = {
     "translation_worker_codefence": (
         TRANSLATION_WORKER_CODEFENCE_SYSTEM,
         TRANSLATION_WORKER_CODEFENCE_PROMPT,
-        STRICT,
+        CODING,
     ),
     "translation_worker_article": (
         TRANSLATION_WORKER_ARTICLE_SYSTEM,

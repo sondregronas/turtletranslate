@@ -1,27 +1,41 @@
 DEFAULT_OPTIONS = {
-    "temperature": 0.7,  # Low randomness for consistency but not completely deterministic
-    "top_k": 40,  # Slightly conservative, but allows some variety
-    "top_p": 0.9,  # Keeps sampling fairly safe
-    "repeat_last_n": 64,  # Uses context size for consistency
+    "num_batch": 512,
+    "num_gpu": 999,
+    "num_thread": 16,
+    "temperature": 0.85,
+    "top_k": 64,
+    "top_p": 0.95,
+    "min_p": 0.05,
+    "repeat_penalty": 1.08,
+    "repeat_last_n": 512,
 }
 
 STRICT = {
-    "temperature": 0.3,
-    "top_k": 15,
-    "top_p": 0.3,
-    "repeat_last_n": -1,
+    **DEFAULT_OPTIONS,
+    "temperature": 0.4,
+    "min_p": 0.08,
+    "repeat_penalty": 1.15,
+    "repeat_last_n": 1024,
 }
 
 LENIENT = {
-    "temperature": 0.5,
-    "top_k": 25,
-    "top_p": 0.5,
-    "repeat_last_n": -1,
+    **DEFAULT_OPTIONS,
+    "temperature": 0.8,
 }
 
 CREATIVE = {
-    "temperature": 0.9,
-    "top_k": 50,
-    "top_p": 0.9,
-    "repeat_last_n": -1,
+    **DEFAULT_OPTIONS,
+    "temperature": 0.95,
+    "top_p": 0.97,
+    "min_p": 0.03,
+    "repeat_penalty": 1.05,
+    "repeat_last_n": 256,
+}
+
+CODING = {
+    **DEFAULT_OPTIONS,
+    "temperature": 0.65,
+    "min_p": 0.1,
+    "repeat_penalty": 1.12,
+    "repeat_last_n": 1024,
 }
