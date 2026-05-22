@@ -1,6 +1,5 @@
 DEFAULT_OPTIONS = {
     "num_batch": 512,
-    "num_gpu": 999,
     "num_thread": 16,
     "temperature": 0.85,
     "top_k": 64,

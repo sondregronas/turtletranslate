@@ -44,6 +44,7 @@ class TurtleTranslator:
     client: ollama.Client
     document: str
     model: str = "gemma3:27b-it-q4_K_M"
+    think: bool = False  # Whether to enable chain-of-thought prompting for the translation step, note: can be slow
     num_ctx: int = 6 * 1024
     source_language: str = "English"
     target_language: str = "Spanish"

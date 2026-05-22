@@ -132,7 +132,7 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
         logger.info(f"Downloaded {model}")
 
 
-def _prompt(data, token: str) -> ollama.GenerateResponse:
+def _prompt(data, token: str, json: bool = False) -> ollama.GenerateResponse:
     """Prompt the Ollama API with the correct system and prompt for the given type (ENUM)."""
     system = TRANSLATE_TYPES[token][0].format(**data.format())
     prompt = TRANSLATE_TYPES[token][1].format(**data.format())
@@ -148,7 +148,14 @@ def _prompt(data, token: str) -> ollama.GenerateResponse:
         "num_ctx": data.num_ctx,
         **opts,
     }
-    response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options)
+    response = data.client.generate(
+        model=data.model,
+        prompt=prompt,
+        system=system,
+        format="json" if json else "",
+        options=options,
+        think=data.think,
+    )
     logger.debug(f"Responded in {timeit.default_timer() - time:.2f}s")
     logger.debug(f"Response: {response.response}")
     return response
@@ -336,7 +343,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
     logger.info(f"Translating frontmatter {attempt_txt}")
     try:
-        new_fm = extrapolate_json(_prompt(data, "frontmatter_worker").response)
+        new_fm = extrapolate_json(_prompt(data, "frontmatter_worker", json=True).response)
         data.translated_frontmatter = new_fm
         for key in new_fm.keys():
             if key not in data.frontmatter.keys():
