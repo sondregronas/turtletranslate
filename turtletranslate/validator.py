@@ -41,7 +41,7 @@ def validate(data, original_content: str, translated_content: str, section_type:
 
     logger.debug("Querying Ollama")
     time = timeit.default_timer()
-    response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options)
+    response = data.client.generate(model=data.model, prompt=prompt, system=system, options=options, think=data.think)
     logger.debug(f"Responded in {timeit.default_timer() - time:.2f}s")
     logger.debug(f"Response: {response.response}")
     text = response.response.strip()
