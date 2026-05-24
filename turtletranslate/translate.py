@@ -1,6 +1,7 @@
 import hashlib
 import json
 import timeit
+import time
 from functools import lru_cache
 
 import markupsafe
@@ -343,6 +344,7 @@ def translate_frontmatter(data, _attempts: int = 0) -> dict:
     attempt_txt = f"\033[34m(Attempt {_attempts + 1}/{data._max_attempts})\033[0m"
     logger.info(f"Translating frontmatter {attempt_txt}")
     try:
+        time.sleep(1)  # Sleep just for a tiny bit to let the computer "breathe"
         new_fm = extrapolate_json(_prompt(data, "frontmatter_worker", json=True).response)
         data.translated_frontmatter = new_fm
         for key in new_fm.keys():
