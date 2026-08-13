@@ -146,7 +146,7 @@ def _prompt(data, token: str, json: bool = False) -> ollama.GenerateResponse:
     logger.debug("Querying Ollama")
     time = timeit.default_timer()
     options = {
-        "num_ctx": data.num_ctx,
+        "num_ctx": max(data.num_ctx // 8, 4 * 1024) if json else data.num_ctx,
         **opts,
     }
     response = data.client.generate(
