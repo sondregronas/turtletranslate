@@ -1,5 +1,6 @@
 import hashlib
 import json
+import math
 import timeit
 import time
 from functools import lru_cache
@@ -133,6 +134,12 @@ def _download_model_if_not_exists(client: ollama.Client, model: str):
         logger.info(f"Downloaded {model}")
 
 
+def _estimate_tokens(text: str, data) -> int:
+    """Estimate required context size and round up to the nearest 1024."""
+    estimated_context = min(len(text) * 3, data.num_ctx)  # multiply by 3 to be safe
+    return max(4 * 1024, math.ceil(estimated_context / 1024) * 1024)  # round up to nearest 1024, with a minimum of 4k
+
+
 def _prompt(data, token: str, json: bool = False) -> ollama.GenerateResponse:
     """Prompt the Ollama API with the correct system and prompt for the given type (ENUM)."""
     system = TRANSLATE_TYPES[token][0].format(**data.format())
@@ -146,7 +153,7 @@ def _prompt(data, token: str, json: bool = False) -> ollama.GenerateResponse:
     logger.debug("Querying Ollama")
     time = timeit.default_timer()
     options = {
-        "num_ctx": max(data.num_ctx // 8, 4 * 1024) if json else data.num_ctx,
+        "num_ctx": _estimate_tokens(system + prompt, data),
         **opts,
     }
     response = data.client.generate(

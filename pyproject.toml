@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "turtletranslate"
-version = "0.11.4"
+version = "0.11.5"
 keywords = ["markdown", "mkdocs", "html", "converter", "ollama"]
 description = "A slow and inefficient markdown translator using ollama"
 readme = "README.md"
