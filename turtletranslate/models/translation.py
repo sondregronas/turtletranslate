@@ -170,6 +170,84 @@ ORIGINAL:
 {translated_section}"""
 
 
+# Content-block-specific system and prompt
+TRANSLATION_WORKER_CONTENTBLOCK_SYSTEM = """\
+You are a translation engine for MkDocs content blocks.
+
+Translate ONLY human-readable text from {source_language} to {target_language}.
+
+OUTPUT CONTRACT:
+- Output ONLY the translated content block.
+- Never output explanations, notes, summaries, analysis, or meta-commentary.
+- Never add text before or after the content block.
+- The response must be directly usable as a replacement for the input section.
+
+Content block requirements:
+- Treat every line's leading structural prefix as immutable. Copy it character-for-character
+  before translating the remainder of the line.
+- Preserve the `=== "..."` or `=== '...'` marker syntax exactly. Translate its human-readable
+  label only if it is not otherwise protected by the input.
+- Preserve every leading `>`, space, tab, and indentation level. For example, `>     text`
+  must remain `>     translated text`, and `    text` must remain `    translated text`.
+- Preserve blank lines, headings, lists, tables, links, emojis, and code fences exactly.
+- Translate prose inside the block, including prose nested under indentation or callout prefixes.
+- Do not translate code, URLs, identifiers, numbers, or syntax.
+- Do not add, remove, summarize, or reorder content."""
+
+TRANSLATION_WORKER_CONTENTBLOCK_PROMPT = """\
+Translate this MkDocs content block from {source_language} to {target_language}.
+
+Return ONLY the translated content block and nothing else.
+
+Hard requirements:
+1. Copy each input line's leading structural prefix character-for-character before translating.
+2. Preserve every leading `>`, space, tab, indentation level, line break, and blank line.
+3. A line beginning with `> ===` must still begin with `> ===`; a line beginning with
+   `>     ` must still begin with `>     `; never remove, add, or normalize these prefixes.
+4. Preserve the content block marker syntax and Markdown structure exactly.
+5. Translate only human-readable prose.
+6. Keep code, URLs, identifiers, numbers, and symbols unchanged.
+7. Do not add, remove, summarize, or reorder content.
+8. Do not output labels, explanations, or extra text.
+
+INPUT:
+{section}"""
+
+TRANSLATION_CRITIC_CONTENTBLOCK_SYSTEM = """\
+You are a strict validator for MkDocs content block translations.
+
+Respond with exactly one of:
+YES
+NO - Explanation: <brief explanation>
+
+Reject any translation that changes the content block marker, indentation, callout prefixes,
+Markdown structure, code, URLs, or content, or that contains meta-commentary."""
+
+TRANSLATION_CRITIC_CONTENTBLOCK_PROMPT = """\
+Validate this MkDocs content block translation.
+
+Respond exactly:
+YES
+or
+NO - Explanation: <brief explanation>
+
+Reject if ANY criterion fails:
+1. The prose is semantically accurate and natural.
+2. Every line has exactly the same leading structural prefix as the original, character-for-character.
+3. The `===` marker syntax is unchanged, including any leading `>` and indentation.
+4. Indentation, callout prefixes, line breaks, and blank lines are preserved.
+5. Headings, emphasis, lists, tables, links, code fences, and other Markdown structure are preserved.
+6. Code, URLs, identifiers, numbers, and symbols are unchanged.
+7. No content was added, removed, summarized, or reordered.
+8. No explanations, labels, or meta-commentary were added.
+
+ORIGINAL:
+{section}
+
+==TRANSLATED_VERSION==
+{translated_section}"""
+
+
 # Codefence-specific system and prompt
 TRANSLATION_WORKER_CODEFENCE_SYSTEM = """\
 You are a translation engine for comments inside markdown code blocks.

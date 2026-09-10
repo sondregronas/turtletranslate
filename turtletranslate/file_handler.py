@@ -9,16 +9,17 @@ from turtletranslate.logger import logger
 from turtletranslate.tokens import TOKENS, NO_TRANSLATE_TOKEN, DEFAULT_TOKEN, PREPEND_TOKEN, TOKENS_CH_LEN
 from typing import Dict
 
-# The blockquote syntax captures content until there is a newline that is not followed by a blockquote symbol
+# The blockquote syntax captures content until there is a newline that is not followed by a blockquote symbol.
+# Content block markers inside blockquotes are handled as separate sections.
 # Captures both callouts and blockquotes
-BLOCKQUOTE_SYNTAX = r"[^\S\r\n]*(?:> ?)([^\n]*(?:\n[ \t>][^\n]*)*)"
+BLOCKQUOTE_SYNTAX = r"[^\S\r\n]*(?:> ?)(?:[^\n]*(?:\n(?![ \t]*>[ \t]*===\s)[ \t>][^\n]*)*)"
+CONTENT_BLOCK_SYNTAX = r"(?:> ?)?===\s[^\n]*"
 DELIMITERS = "|".join(
     [
         r"#{1,6}\s",  # Headers
         r"`{3}(?:\n|.)+?`{3}",  # Code fences
+        CONTENT_BLOCK_SYNTAX,  # MkDocs content blocks
         BLOCKQUOTE_SYNTAX,  # Callouts and blockquotes
-        # These are commented out because they can cause extra hallucinations in the translation, omitting them for now
-        # r"={3}\s",  # Content blocks  # Not a problem so far, but might give inconsistent spacing
     ]
 )
 
@@ -60,6 +61,8 @@ def _cleanup_sections(sections: list[str]) -> list[str]:
         s = section.strip()
         if not s:
             return False
+        if s.startswith(("===", "> ===")):
+            return True
         if s[0] not in mergable_symbols:
             return False
         return len(s) == s.count(s[0])
@@ -67,15 +70,13 @@ def _cleanup_sections(sections: list[str]) -> list[str]:
     merged_sections = []
     for i, section in enumerate(sections):
         if i + 1 < len(sections) and should_merge(section):
-            merged_sections.append(f"{section}{sections[i + 1]}")
+            separator = "\n" if section.strip().startswith(("===", "> ===")) else ""
+            merged_sections.append(f"{section}{separator}{sections[i + 1]}")
             sections.pop(i + 1)  # Remove the next section, as it has been merged
         # If it matches the callout syntax, we should skip the next section, as it gets captured in the callout itself
         elif callout_regex.match(section):
             merged_sections.append(section)
-            logger.debug("Removing section after callout")
             logger.debug("Keeping: " + section.replace("\n", "\\n"))
-            logger.debug("Removing: " + sections[i + 1].replace("\n", "\\n"))
-            sections.pop(i + 1)  # Remove the next section, as it is already captured in the callout
         else:
             merged_sections.append(section)
     return [_unprep_codefences(s) for s in merged_sections]
@@ -86,7 +87,9 @@ def _tokenize_sections(sections: list[str]) -> list[dict[str, str]]:
     tokens = list()
     for section in sections:
         for token, token_type in TOKENS.items():
-            if section.startswith(token):
+            if section.startswith(token) or (
+                token == "===" and section.lstrip().startswith("> ===")
+            ):
                 tokens.append({token_type: section})
                 break
             # If no alphanumeric characters are present, we can mark it as a no_translate section

@@ -1,6 +1,7 @@
 # TODO: Use enum
 TOKENS = {
     "#": "article",  # Headers + content, up until a new delimiter
+    "===": "contentblock",  # MkDocs content blocks + content, up until a new delimiter
     ">": "blockquote",  # Blockquotes in their entirety
     "```": "codefence",  # Code fences in their entirety (not including inside blockquotes)
 }
