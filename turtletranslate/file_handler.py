@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from functools import lru_cache
@@ -43,11 +44,21 @@ def _unprep_codefences(markdown: str) -> str:
     return markdown.replace("\n!%CODEFENCE%!", "\n")
 
 
+# A bare [[wikilink]] value (`key: [[Page]]` or `- [[Page|Alias]]`) is valid YAML for a nested list, which would be
+# written back as `- - - Page|Alias` and stop being a link.
+bare_wikilink_value_regex = re.compile(r"^([ \t]*(?:-[ \t]+|[\w-]+:[ \t]*))(\[\[[^\]\n]*\]\])[ \t]*$", re.MULTILINE)
+
+
+def _quote_wikilinks(frontmatter: str) -> str:
+    """Quote bare [[wikilink]] values so YAML keeps them as strings."""
+    return bare_wikilink_value_regex.sub(lambda m: m.group(1) + json.dumps(m.group(2), ensure_ascii=False), frontmatter)
+
+
 def _get_frontmatter(markdown: str) -> dict:
     """Get the frontmatter from a markdown string as a dictionary."""
     frontmatter = {}
     if markdown.startswith("---\n"):
-        frontmatter = yaml.safe_load(markdown.split("---\n")[1])
+        frontmatter = yaml.safe_load(_quote_wikilinks(markdown.split("---\n")[1]))
     return frontmatter
 
 
